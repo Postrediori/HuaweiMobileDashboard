@@ -38,7 +38,7 @@ The script was tested on the following routers:
 
 ## TODO
 
-* [ ] Safer XML parser
+* [x] Safer XML parser
 * [ ] LTE Band selector (it is possible to specify LTE bands, but without non-standard firmware it is impossible to check what LTE band is actually in use or what are the EARFCN frequency codes).
 * [ ] Adjust refresh rate (now it is handled by `UPDATE_MS` variable in the script)
 

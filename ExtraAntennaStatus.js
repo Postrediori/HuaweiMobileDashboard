@@ -36,19 +36,46 @@ const RATE_MBPS = "MBit/s";
 var mode = "";
 
 /**
- * Extract tag from XML
- * @param {String} tag Name of the tag
+ * Convert string with XML into Document object
  * @param {String} data String with XML data
- * @returns COntents of the tag
+ * @returns Document object or null
  */
-function extractXML(tag, data) {
+function getXMLDocument(data) {
     try {
-        return data.split("</" + tag + ">")[0].split("<" + tag + ">")[1];
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, "application/xml");
+        const errorNode = doc.querySelector("parsererror");
+
+        if (errorNode) {
+            console.log("XML Error: Error while parsing XML document");
+            return null;
+        }
+
+        return doc;
     }
     catch (err) {
-        console.log("XML Error: ", err.message);
-        return err.message;
+        console.log("XML Error:", err.message);
     }
+    return null;
+}
+
+/**
+ * Extract tag from XML
+ * @param {String} tag Name of the tag
+ * @param {String} data Document object with XML data
+ * @returns Contents of the tag or null
+ */
+function extractXML(tag, document) {
+    try {
+        const tags = document.getElementsByTagName(tag);
+        if (tags.length > 0) {
+            return tags[0].innerHTML;
+        }
+    }
+    catch (err) {
+        console.log("XML Error:", err.message);
+    }
+    return null;
 }
 
 /**
@@ -103,7 +130,7 @@ function setParam(param, val) {
 function setMode(newMode) {
     if (mode !== newMode) {
         mode = newMode;
-        console.log("Network mode set to ", mode);
+        console.log("Network mode set to", mode);
 
         document.getElementById("status_3g").style.display = "none";
         document.getElementById("status_lte").style.display = "none";
@@ -121,44 +148,47 @@ function setMode(newMode) {
  * Update UI dashboard with current status of the modem
  */
 function currentBand() {
-    var report = "";
-
     $.ajax({
         type: "GET",
         async: true,
         url: '/api/device/signal',
         error: function(request,status,error) {
-            console.log("Signal Error:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+            console.log("Error: Cannot get Signal data:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
         },
         success: function(data) {
-            const currentMode = getModeDescription(extractXML("mode",data));
+            const doc = getXMLDocument(data);
+            if (doc) {
+                const currentMode = getModeDescription(extractXML("mode", doc));
 
-            report = report + "Network mode : "+currentMode;
-            setParam("mode", currentMode);
-            setMode(currentMode);
+                var report = `Network mode : ${currentMode}`;
+                setParam("mode", currentMode);
+                setMode(currentMode);
 
-            const rssi = extractXML("rssi",data);
-            report = report + "\nRSSI : "+rssi;
+                const rssi = extractXML("rssi", doc);
+                report += `\nRSSI : ${rssi}`;
 
-            setParam("rssi", rssi);
+                setParam("rssi", rssi);
 
-            if (mode === "WCDMA") {
-                const rscp = extractXML("rscp",data);
-                const ecio = extractXML("ecio",data);
-                report = report + "\nRSCP : "+rsrq+" EC/IO : "+ecio;
-                
-                setParam("rscp", rscp);
-                setParam("ecio", ecio);
-            }
-            else if (mode === "LTE") {
-                const rsrq = extractXML("rsrq",data);
-                const rsrp = extractXML("rsrp",data);
-                const sinr = extractXML("sinr",data);
-                report = report + "\nRSRQ/RSRP/SINR : "+rsrq+"/"+rsrp+"/"+sinr;
-                
-                setParam("rsrp", rsrp);
-                setParam("rsrq", rsrq);
-                setParam("sinr", sinr);
+                if (mode === "WCDMA") {
+                    const rscp = extractXML("rscp",doc);
+                    const ecio = extractXML("ecio",doc);
+                    report += `\nRSCP : ${rsrq} EC/IO : ${ecio}`;
+                    
+                    setParam("rscp", rscp);
+                    setParam("ecio", ecio);
+                }
+                else if (mode === "LTE") {
+                    const rsrq = extractXML("rsrq",doc);
+                    const rsrp = extractXML("rsrp",doc);
+                    const sinr = extractXML("sinr",doc);
+                    report += `\nRSRQ/RSRP/SINR : ${rsrq}/${rsrp}/${sinr}`;
+                    
+                    setParam("rsrp", rsrp);
+                    setParam("rsrq", rsrq);
+                    setParam("sinr", sinr);
+                }
+
+                console.log(report);
             }
         }
     });
@@ -168,21 +198,22 @@ function currentBand() {
         async: true,
         url: '/api/monitoring/traffic-statistics',
         error: function(request,status,error) {
-            console.log("Traffic statistics Error:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+            console.log("Error: Traffic statistics responce fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
         },
         success: function(data) {
-            const dl = extractXML("CurrentDownloadRate",data);
-            const ul = extractXML("CurrentUploadRate",data);
-            report = report + "\nDownload : "+dl+" Upload : "+ul;
+            const doc = getXMLDocument(data);
+            if (doc) {
+                const dl = extractXML("CurrentDownloadRate", doc);
+                const ul = extractXML("CurrentUploadRate", doc);
+                const report = `Download : ${dl} Upload : ${ul}`;
+    
+                setParam("dl", formatBandwidth(dl));
+                setParam("ul", formatBandwidth(ul));
 
-            setParam("dl", formatBandwidth(dl));
-            setParam("ul", formatBandwidth(ul));
+                console.log(report);
+            }
         }
     });
-
-    if (report!=="") {
-        console.log(report);
-    }
 }
 
 function statusHeader() {
