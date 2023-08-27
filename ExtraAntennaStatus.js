@@ -185,6 +185,60 @@ function currentBand() {
     }
 }
 
+function ltebandselection(e) {
+    var band = prompt("Please input desirable LTE band number. " +
+        "If you want to use multiple LTE bands, write down multiple band number joined with '+'." +
+        "If you want to use every supported bands, write down 'ALL'. (e.g. 3+7 / 1+3 / 1+3+8)." +
+        "Leave this empty to leave as is.", "ALL");
+    if (band==null || band==="") {
+        console.log("No band selected");
+        return;
+    }
+
+    var lteFlags;
+    if(band.toUpperCase()==="ALL") {
+        lteFlags = "7FFFFFFFFFFFFFFF";
+    }
+    else {
+        var bandList = band.split('+');
+        var flags = 0;
+        for (const bandId of bandList) {
+            flags = flags + Math.pow(2, parseInt(bandId)-1);
+        }
+        lteFlags = flags.toString(16);
+    }
+    console.log("LTE Band Flags:", lteFlags);
+
+    $.ajax({
+        type:"GET",
+        async: true,
+        url: '/html/home.html',
+        error: function(request,status,error){
+            console.log("Token Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+        },            
+        success: function(data){
+            var datas = data.split('name="csrf_token" content="');
+            var token = datas[datas.length-1].split('"')[0];
+            setTimeout(function() {
+                $.ajax({
+                    type: "POST",
+                    async: true,
+                    url: '/api/net/net-mode',
+                    headers: {'__RequestVerificationToken':token},
+                    contentType: 'application/xml',
+                    data: `<request><NetworkMode>03</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>${lteFlags}</LTEBand></request>`,
+                    success: function(nd){
+                        console.log("Band set success : ", nd);
+                    },
+                    error: function(request,status,error){
+                        console.log("Net Mode Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+                    }
+                });
+            }, UPDATE_MS);
+        }
+    });
+}
+
 function statusHeader() {
 const header = `<style>
     #mode,
@@ -198,6 +252,14 @@ const header = `<style>
     #dl {
         color: #b00;
         font-weight: strong;
+    }
+
+    #setband {
+        font-weight:bolder;
+        background-color: #448;
+        color:white;
+        padding: 10px;
+        border-radius:10px;
     }
 
     .f {
@@ -226,6 +288,11 @@ const header = `<style>
             <li>RSSI:<span id="rssi">#</span></li>
         </ul>
     </div>
+    <div class="f">
+        <ul>
+            <li style="margin-right: 0px;"><a id="setband" href="#">Force 4G Bands</a></li>
+        </ul>
+    </div>
     <div class="f" id="status_3g">
         <ul>
             <li>RSCP:<span id="rscp">#</span></li>
@@ -247,6 +314,9 @@ const header = `<style>
     </div>
 </div>`;
     document.body.insertAdjacentHTML("afterbegin", header);
+    document.getElementById("setband").addEventListener (
+        "click", ltebandselection, false
+    );
 }
 
 statusHeader();
