@@ -126,18 +126,6 @@ function currentBand() {
     $.ajax({
         type: "GET",
         async: true,
-        url: '/api/net/net-mode-list',
-        error: function(request,status,error) {
-            console.log("Network mode list error:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
-        },
-        success: function(data) {
-            console.log(data);
-        }
-    });
-
-    $.ajax({
-        type: "GET",
-        async: true,
         url: '/api/device/signal',
         error: function(request,status,error) {
             console.log("Signal Error:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
