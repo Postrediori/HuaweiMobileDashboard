@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Huawei Extra Antenna Status dashboard
 // @namespace    http://github.com/Postrediori/HuaweiMobileDashboard
-// @version      0.1
+// @version      0.2
 // @description  Additional dashboard with antenna signal data
 // @author       Postrediori
 // @match        http://192.168.8.1/*
@@ -35,15 +35,10 @@ const RATE_MBPS = "MBit/s";
  */
 var mode = "";
 
-/**
- * Convert string with XML into Document object
- * @param {String} data String with XML data
- * @returns Document object or null
- */
-function getXMLDocument(data) {
+function getDocument(data, type) {
     try {
         const parser = new DOMParser();
-        const doc = parser.parseFromString(data, "application/xml");
+        const doc = parser.parseFromString(data, type);
         const errorNode = doc.querySelector("parsererror");
 
         if (errorNode) {
@@ -57,6 +52,24 @@ function getXMLDocument(data) {
         console.log("XML Error:", err.message);
     }
     return null;
+}
+
+/**
+ * Convert string with XML into Document object
+ * @param {String} data String with XML data
+ * @returns Document object or null
+ */
+function getXMLDocument(data) {
+    return getDocument(data, "application/xml");
+}
+
+/**
+ * Convert string with HTML into Document object
+ * @param {String} data String with HTML data
+ * @returns Document object or null
+ */
+function getHTMLDocument(data) {
+    return getDocument(data, "text/html");
 }
 
 /**
@@ -76,6 +89,59 @@ function extractXML(tag, document) {
         console.log("XML Error:", err.message);
     }
     return null;
+}
+
+/**
+ * Get csrf_token of the session from meta tags
+ * @param {String} String with HTML data
+ * @returns String with csrf_token or null
+ */
+function getDocumentCsrfToken(data) {
+    var doc = getHTMLDocument(data);
+    if (!doc) {
+        console.log("Error:Cannot get Web UI page");
+        return null;
+    }
+
+    var token = null;
+    var metaTags = doc.getElementsByTagName("meta");
+    for (const tag of metaTags) {
+        if (tag.getAttribute("name") === "csrf_token") {
+            var tokenAttribute = tag.getAttribute("content");
+            if (tokenAttribute) {
+                token = tokenAttribute;
+                break;
+            }
+        }
+    }
+
+    return token;
+}
+
+/**
+ * Get error code from response data
+ * @param {String} data XMLDocument with XML response
+ * @returns Error code or zero in case operation was successfull
+ */
+function getResponseStatus(doc) {
+    var tags = doc.getElementsByTagName("response");
+    if (tags.length>0 && tags[0].innerHTML === "OK") {
+        return 0;
+    }
+    else {
+        var errtags = doc.getElementsByTagName("error");
+        if (errtags.length>0) {
+            var err = {};
+            for (const t of errtags[0].children) {
+                err[t.nodeName] = t.innerHTML;
+            }
+            console.log("Error: Received responce with error:", err);
+        }
+        else {
+            console.log("Error: Received responce with unknown status");
+        }
+        return 1;
+    }
 }
 
 /**
@@ -248,8 +314,12 @@ function ltebandselection(e) {
             console.log("Token Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
         },            
         success: function(data){
-            var datas = data.split('name="csrf_token" content="');
-            var token = datas[datas.length-1].split('"')[0];
+            var token = getDocumentCsrfToken(data);
+            if (!token) {
+                console.log("Error: Web UI page is not logged in");
+                return;
+            }
+
             setTimeout(function() {
                 $.ajax({
                     type: "POST",
@@ -259,7 +329,22 @@ function ltebandselection(e) {
                     contentType: 'application/xml',
                     data: `<request><NetworkMode>03</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>${lteFlags}</LTEBand></request>`,
                     success: function(nd){
-                        console.log("Band set success : ", nd);
+                        // It may be either string or XMLDocument here
+                        var doc = null;
+                        if (typeof(nd)==="string" || nd instanceof String) {
+                            doc = getXMLDocument(nd);
+                        }
+                        else {
+                            doc = nd;
+                        }
+
+                        var status = getResponseStatus(doc);
+                        if (status === 0) {
+                            console.log("Network mode set successfully");
+                        }
+                        else {
+                            console.log("Error while setting band list");
+                        }
                     },
                     error: function(request,status,error){
                         console.log("Net Mode Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
