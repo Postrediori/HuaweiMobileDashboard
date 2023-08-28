@@ -1,6 +1,8 @@
 # Huawei Mobile Dashboard
 
-This repository contains js script for [TamperMonkey addon](https://www.tampermonkey.net/) that show dashboard with mobile connection parameters that are not always available in the Web UI of Huawei routers.
+This repository contains JavaScript code that show dashboard with mobile connection parameters that are not always available in the Web UI of Huawei routers. There are two versions of the script:
+* as acode for browser **Bookmark**
+* as [TamperMonkey addon](https://www.tampermonkey.net/)
 
 Currently the extra dashboard shows the following data:
 * network type (GSM, WCDMA, LTE)
@@ -9,16 +11,29 @@ Currently the extra dashboard shows the following data:
 
 ## Screenshots
 
+E5330, 3g-only mobile router:
+
 ![Dashboard on E5330 router web UI](images/e5330.png)
 
+E5573, LTE mobile router:
+
 ![Dashboard on E5573 router web UI](images/e5573.png)
+
+E8372, LTE USB modem:
 
 ![Dashboard on E8372 router web UI](images/e8372.png)
 
 ## Usage
 
+### Bookmark version
+
+* Create new bookmark in a browser and add the code from [ExtraAntennaStatus-min.js](ExtraAntennaStatus-min.js) file as bookmark URL
+* Navigate to mobile WiFi page, login into browser status and execute the bookmark.
+
+### TamperMonkey addon version
+
 * Install TamperMonkey addon to your browser (available on Chrome, Firefox, Firefox Mobile, etc) - https://www.tampermonkey.net/
-* Create new user script and copy the contents of the `ExtraAntennaStatus.js` file
+* Create new user script and copy the contents of the [ExtraAntennaStatus.js](ExtraAntennaStatus.js) file
 * Update `@match` tag to web dashboard address of the modem. One can specify several `@match` in case there are several adresses, i.e.:
 
 ```
@@ -36,11 +51,20 @@ The script was tested on the following routers:
 * E5573s-320
 * E8372h-608
 
+## Tested on
+
+* Firefox 116  & TamperMonkey 4.19 (addon version)
+  * Ubuntu Linux 23.04
+  * Windows 10
+  * Android 13
+* MS Edge 116
+  * Windows 10
+
 ## TODO
 
 * [x] Safer XML parser
-* [ ] LTE Band selector (it is possible to specify LTE bands, but without non-standard firmware it is impossible to check what LTE band is actually in use or what are the EARFCN frequency codes).
-* [ ] Adjust refresh rate (now it is handled by `UPDATE_MS` variable in the script)
+* [ ] LTE Band selector. It is possible to specify LTE bands, but without non-standard firmware it is impossible to check what LTE band is actually in use or what are the EARFCN frequency codes.
+* [ ] Adjust refresh rate. Now it is handled by `UPDATE_MS` variable in the script.
 
 ## Acknowledgments
 
