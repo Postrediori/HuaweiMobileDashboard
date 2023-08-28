@@ -33,7 +33,7 @@ const RATE_MBPS = "MBit/s";
 /**
  * Global variables
  */
-var mode = "";
+let mode = "";
 
 function getDocument(data, type) {
     try {
@@ -150,7 +150,7 @@ function getResponseStatus(doc) {
  * @returns Formatted string with proper units (kbps, mpbs, etc)
  */
 function formatBandwidth(bytesPerSec) {
-    var bitsPerSec = bytesPerSec * 8;
+    let bitsPerSec = bytesPerSec * 8;
 
     if (bitsPerSec<SIZE_KB) {
         return `${bitsPerSec}${RATE_BPS}`;
@@ -189,6 +189,15 @@ function setParam(param, val) {
 }
 
 /**
+ * Set visibility of a block specifiedby id
+ * @param {String} id Id of a block
+ * @param {Boolean} visible Flag of visibility
+ */
+function setVisible(id, visible) {
+    document.getElementById(id).style.display = visible ? "block" : "none";
+}
+
+/**
  * Switch networking mode. Update visibility of UI controls.
  * Does nothing if mode didn't change.
  * @param {String} newMode New networking mode (WCDMA, LTE)
@@ -198,14 +207,14 @@ function setMode(newMode) {
         mode = newMode;
         console.log("Network mode set to", mode);
 
-        document.getElementById("status_3g").style.display = "none";
-        document.getElementById("status_lte").style.display = "none";
+        setVisible("status_3g", false);
+        setVisible("status_lte", false);
 
         if (mode === "WCDMA") {
-            document.getElementById("status_3g").style.display = "block";
+            setVisible("status_3g", true);
         }
         else if (mode === "LTE") {
-            document.getElementById("status_lte").style.display = "block";
+            setVisible("status_lte", true);
         }
     }
 }
@@ -226,7 +235,7 @@ function currentBand() {
             if (doc) {
                 const currentMode = getModeDescription(extractXML("mode", doc));
 
-                var report = `Network mode : ${currentMode}`;
+                let report = `Network mode : ${currentMode}`;
                 setParam("mode", currentMode);
                 setMode(currentMode);
 
@@ -433,9 +442,9 @@ const header = `<style>
     document.getElementById("setband").addEventListener (
         "click", ltebandselection, false
     );
+    setInterval(currentBand, UPDATE_MS);
 }
 
 statusHeader();
-setInterval(currentBand, UPDATE_MS);
 
 })();
