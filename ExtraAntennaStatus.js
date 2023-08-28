@@ -34,6 +34,8 @@ const RATE_MBPS = "MBit/s";
  * Global variables
  */
 let mode = "";
+let history = {"sinr": [], "rsrp": [], "rsrq": [], "rscp": [], "ecio": []};
+let boxcar = 125, gt = 3, gw = boxcar*(gt+1), gh = 30;
 
 /**
  * Convert string with XML into Document object
@@ -144,6 +146,8 @@ function setMode(newMode) {
         setVisible("status_3g", false);
         setVisible("status_lte", false);
 
+        for (let k in history) { history[k] = []; }
+
         if (mode === "WCDMA") {
             setVisible("status_3g", true);
         }
@@ -151,6 +155,27 @@ function setMode(newMode) {
             setVisible("status_lte", true);
         }
     }
+}
+
+function barGraph(p, v, c, min, max) {
+    let val = v.slice(0, -c);
+    if(val > max){val = max;}
+    if(val < min){val = min;}
+    history[p].unshift(val);
+    if(history[p].length > boxcar){history[p].pop();}
+    let html = `<svg version="1.1" viewBox="0 0 ${gw} ${gh}" width="${gw}" height="${gh}" preserveAspectRatio="xMaxYMax slice" style="border:1px solid #ccc;padding:1px;margin-top:-6px;width:${gw}px;">`;
+
+    for (let x = 0; x < history[p].length; x++) {
+        let pax = (gt + 1) * (x + 1);
+        let pay = gh - 1;
+        let pby = gh - (history[p][x] - min) / (max - min) * gh;
+        if (isNaN(pby)){pby = pay;}
+        let pc = (history[p][x] - min) / (max - min) * 100;
+        let color = pc < 50 ? "red" : (pc < 85 ? "orange" : "green");
+        html += `<line x1="${pax}" y1="${pay}" x2="${pax}" y2="${pby}" stroke="${color}" stroke-width="${gt}"></line>`;
+    }
+    html += "</svg>";
+    document.getElementById("b" + p).innerHTML = html;
 }
 
 /**
@@ -183,8 +208,8 @@ function currentBand() {
                     const ecio = extractXML("ecio",doc);
                     report += `\nRSCP : ${rsrq} EC/IO : ${ecio}`;
                     
-                    setParam("rscp", rscp);
-                    setParam("ecio", ecio);
+                    setParam("rscp", rscp); barGraph("rscp", rscp, 3, -100, -70);
+                    setParam("ecio", ecio); barGraph("ecio", ecio, 2, 0, 24);
                 }
                 else if (mode === "LTE") {
                     const rsrq = extractXML("rsrq",doc);
@@ -192,9 +217,9 @@ function currentBand() {
                     const sinr = extractXML("sinr",doc);
                     report += `\nRSRQ/RSRP/SINR : ${rsrq}/${rsrp}/${sinr}`;
                     
-                    setParam("rsrp", rsrp);
-                    setParam("rsrq", rsrq);
-                    setParam("sinr", sinr);
+                    setParam("rsrp", rsrp); barGraph("rsrp", rsrp, 3, -130, -60);
+                    setParam("rsrq", rsrq); barGraph("rsrq", rsrq, 2, -16, -3);
+                    setParam("sinr", sinr); barGraph("sinr", sinr, 2, 0, 24);
                 }
 
                 console.log(report);
@@ -267,17 +292,13 @@ const header = `<style>
         </ul>
     </div>
     <div class="f" id="status_3g">
-        <ul>
-            <li>RSCP:<span id="rscp">#</span></li>
-            <li>EC/Io:<span id="ecio">#</span></li>
-        </ul>
+        RSCP:<span id="rscp">#</span><div id="brscp"></div>
+        EC/Io:<span id="ecio">#</span><div id="becio"></div>
     </div>
     <div class="f" id="status_lte">
-        <ul>
-            <li>RSRQ:<span id="rsrq">#</span></li>
-            <li>RSRP:<span id="rsrp">#</span></li>
-            <li>SINR:<span id="sinr">#</span></li>
-        </ul>
+        RSRQ:<span id="rsrq">#</span><div id="brsrq"></div>
+        RSRP:<span id="rsrp">#</span><div id="brsrp"></div>
+        SINR:<span id="sinr">#</span><div id="bsinr"></div>
     </div>
     <div class="f" id="bandwidth">
         <ul>
