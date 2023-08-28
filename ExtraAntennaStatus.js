@@ -42,14 +42,14 @@ function getDocument(data, type) {
         const errorNode = doc.querySelector("parsererror");
 
         if (errorNode) {
-            console.log("XML Error: Error while parsing XML document");
+            console.log("DOM Error: Error while parsing");
             return null;
         }
 
         return doc;
     }
     catch (err) {
-        console.log("XML Error:", err.message);
+        console.log("DOM Error:", err.message);
     }
     return null;
 }
@@ -97,17 +97,17 @@ function extractXML(tag, document) {
  * @returns String with csrf_token or null
  */
 function getDocumentCsrfToken(data) {
-    var doc = getHTMLDocument(data);
+    let doc = getHTMLDocument(data);
     if (!doc) {
         console.log("Error:Cannot get Web UI page");
         return null;
     }
 
-    var token = null;
-    var metaTags = doc.getElementsByTagName("meta");
+    let token = null;
+    let metaTags = doc.getElementsByTagName("meta");
     for (const tag of metaTags) {
         if (tag.getAttribute("name") === "csrf_token") {
-            var tokenAttribute = tag.getAttribute("content");
+            let tokenAttribute = tag.getAttribute("content");
             if (tokenAttribute) {
                 token = tokenAttribute;
                 break;
@@ -124,14 +124,14 @@ function getDocumentCsrfToken(data) {
  * @returns Error code or zero in case operation was successfull
  */
 function getResponseStatus(doc) {
-    var tags = doc.getElementsByTagName("response");
+    let tags = doc.getElementsByTagName("response");
     if (tags.length>0 && tags[0].innerHTML === "OK") {
         return 0;
     }
     else {
-        var errtags = doc.getElementsByTagName("error");
+        let errtags = doc.getElementsByTagName("error");
         if (errtags.length>0) {
-            var err = {};
+            let err = {};
             for (const t of errtags[0].children) {
                 err[t.nodeName] = t.innerHTML;
             }
@@ -195,6 +195,15 @@ function setParam(param, val) {
  */
 function setVisible(id, visible) {
     document.getElementById(id).style.display = visible ? "block" : "none";
+}
+
+/**
+ * Set background color of a control
+ * @param {String} id Id of a block
+ * @param {String} c Color
+ */
+function setColor(id,c) {
+    document.getElementById(id).style.backgroundColor = c;
 }
 
 /**
@@ -291,8 +300,26 @@ function currentBand() {
     });
 }
 
+function setBandWait() {
+    setVisible("t", true);
+    setParam("t",   "PLEASE WAIT");
+    setColor("t", "orange");
+}
+
+function setBandSuccess() {
+    setParam("t", "SUCCESS");
+    setColor("t", "green");
+    setInterval(function(){setVisible("t",false);},5000);
+}
+
+function setBandError() {
+    setParam("t", "ERROR");
+    setColor("t", "red");
+    setInterval(function(){setVisible("t",false);},5000);
+}
+
 function ltebandselection(e) {
-    var band = prompt("Please input desirable LTE band number. " +
+    let band = prompt("Please input desirable LTE band number. " +
         "If you want to use multiple LTE bands, write down multiple band number joined with '+'." +
         "If you want to use every supported bands, write down 'ALL'. (e.g. 3+7 / 1+3 / 1+3+8)." +
         "Leave this empty to leave as is.", "ALL");
@@ -301,19 +328,21 @@ function ltebandselection(e) {
         return;
     }
 
-    var lteFlags;
+    let lteFlags;
     if(band.toUpperCase()==="ALL") {
         lteFlags = "7FFFFFFFFFFFFFFF";
     }
     else {
-        var bandList = band.split('+');
-        var flags = 0;
+        let bandList = band.split('+');
+        let flags = 0;
         for (const bandId of bandList) {
             flags = flags + Math.pow(2, parseInt(bandId)-1);
         }
         lteFlags = flags.toString(16);
     }
     console.log("LTE Band Flags:", lteFlags);
+
+    setBandWait();
 
     $.ajax({
         type:"GET",
@@ -323,11 +352,13 @@ function ltebandselection(e) {
             console.log("Token Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
         },            
         success: function(data){
-            var token = getDocumentCsrfToken(data);
+            let token = getDocumentCsrfToken(data);
             if (!token) {
                 console.log("Error: Web UI page is not logged in");
                 return;
             }
+
+            let nw=document.getElementById("force4g").checked ? "03" : "00";
 
             setTimeout(function() {
                 $.ajax({
@@ -336,10 +367,10 @@ function ltebandselection(e) {
                     url: '/api/net/net-mode',
                     headers: {'__RequestVerificationToken':token},
                     contentType: 'application/xml',
-                    data: `<request><NetworkMode>03</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>${lteFlags}</LTEBand></request>`,
+                    data: `<request><NetworkMode>${nw}</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>${lteFlags}</LTEBand></request>`,
                     success: function(nd){
                         // It may be either string or XMLDocument here
-                        var doc = null;
+                        let doc;
                         if (typeof(nd)==="string" || nd instanceof String) {
                             doc = getXMLDocument(nd);
                         }
@@ -347,16 +378,19 @@ function ltebandselection(e) {
                             doc = nd;
                         }
 
-                        var status = getResponseStatus(doc);
+                        let status = getResponseStatus(doc);
                         if (status === 0) {
                             console.log("Network mode set successfully");
+                            setBandSuccess();
                         }
                         else {
                             console.log("Error while setting band list");
+                            setBandError();
                         }
                     },
                     error: function(request,status,error){
                         console.log("Net Mode Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+                        setBandError();
                     }
                 });
             }, UPDATE_MS);
@@ -405,6 +439,17 @@ const header = `<style>
         display: inline;
         margin-right: 10px;
     }
+
+    #t {
+        float: left;
+        color: white;
+        margin: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        display: none;
+        text-align: center;
+        font-weight: bolder;
+    }
 </style>
 <div style="display:block;overflow:auto;">
     <div class="f" id="status_general">
@@ -415,9 +460,11 @@ const header = `<style>
     </div>
     <div class="f">
         <ul>
-            <li style="margin-right: 0px;"><a id="setband" href="#">Force 4G Bands</a></li>
+            <li style="margin-right: 0px;"><a id="setband" href="#">Set LTE Bands</a></li>
+            <li><label>LTE Only</label>&nbsp;<input id="force4g" type="checkbox"></li>
         </ul>
     </div>
+    <div id="t"></div>
     <div class="f" id="status_3g">
         <ul>
             <li>RSCP:<span id="rscp">#</span></li>
