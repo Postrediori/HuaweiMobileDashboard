@@ -1,6 +1,6 @@
-# Huawei Mobile Dashboard
+# Mobile Router Dashboard
 
-This repository contains JavaScript code that show dashboard with mobile connection parameters that are not always available in the Web UI of Huawei routers. There are two versions of the script:
+This repository contains JavaScript code that show dashboard with mobile connection parameters that are not always available in the Web UI of Huawei&Netgear routers. There are two versions of the script:
 * as acode for browser **Bookmark**
 * as [TamperMonkey addon](https://www.tampermonkey.net/)
 
@@ -10,6 +10,8 @@ Currently the extra dashboard shows the following data:
 * DL/UL bandwidth on the web dashboard of Huawei routers
 
 ## Screenshots
+
+### Huawei version
 
 Dashboard with bar plot of signal history:
 
@@ -23,17 +25,23 @@ Example setup of B1+B7 with LTE only:
 
 ![Setting specific bands and using only LTE](images/e5573_5.png)
 
+### Netgear version
+
+Dashboard with history and download/upload rate:
+
+![Dashboard on Netgear web UI](images/mr2100.png)
+
 ## Usage
 
 ### Bookmark version
 
-* Create new bookmark in a browser and add the code from [ExtraAntennaStatus-min.js](ExtraAntennaStatus-min.js) file as bookmark URL
+* Create new bookmark in a browser and add the code from [ExtraAntennaStatus-min.js](ExtraAntennaStatus-min.js)for Huawei router or [NetgearEAS-min.js](NetgearEAS-min.js) for Netgear router file as bookmark URL
 * Navigate to mobile WiFi page, login into browser status and execute the bookmark.
 
 ### TamperMonkey addon version
 
 * Install TamperMonkey addon to your browser (available on Chrome, Firefox, Firefox Mobile, etc) - https://www.tampermonkey.net/
-* Create new user script and copy the contents of the [ExtraAntennaStatus.js](ExtraAntennaStatus.js) file
+* Create new user script and copy the contents of the [ExtraAntennaStatus.js](ExtraAntennaStatus.js) for Huawei router or [NetgearEAS.js](NetgearEAS.js) for Netgear router file
 * Update `@match` tag to web dashboard address of the modem. One can specify several `@match` in case there are several adresses, i.e.:
 
 ```
@@ -47,9 +55,15 @@ Example setup of B1+B7 with LTE only:
 
 The script was tested on the following routers:
 
+### Huawei
+
 * E5330
 * E5573s-320
 * E8372h-608
+
+### Netgear
+
+* Netgear Nighthawk M2 (MR2100)
 
 ## Tested on
 
