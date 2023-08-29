@@ -35,7 +35,7 @@ const RATE_MBPS = "MBit/s";
  */
 let mode = "";
 let history = {"sinr": [], "rsrp": [], "rsrq": [], "rscp": [], "ecio": []};
-let boxcar = 125, gt = 3, gw = boxcar*(gt+1), gh = 30;
+let boxcar = 100, gt = 3, gw = boxcar*(gt+1), gh = 30;
 let timerInterval;
 
 function getDocument(data, type) {
