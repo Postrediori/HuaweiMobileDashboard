@@ -11,17 +11,17 @@ Currently the extra dashboard shows the following data:
 
 ## Screenshots
 
-E5330, 3g-only mobile router:
+Dashboard with bar plot of signal history:
 
-![Dashboard on E5330 router web UI](images/e5330.png)
+![Dashboard on E5573 router web UI](images/e5573_2.png)
 
-E5573, LTE mobile router:
+Specifying LTE bands:
 
-![Dashboard on E5573 router web UI](images/e5573.png)
+![Setting custom LTE bands](images/e5573_3.png)
 
-E8372, LTE USB modem:
+Example setup of B1+B7 with LTE only:
 
-![Dashboard on E8372 router web UI](images/e8372.png)
+![Setting specific bands and using only LTE](images/e5573_5.png)
 
 ## Usage
 
