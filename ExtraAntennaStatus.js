@@ -34,6 +34,7 @@ const RATE_MBPS = "MBit/s";
  * Global variables
  */
 let mode = "";
+let timerInterval;
 
 function getDocument(data, type) {
     try {
@@ -301,6 +302,7 @@ function currentBand() {
 }
 
 function setBandWait() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval=null; }
     setVisible("t", true);
     setParam("t",   "PLEASE WAIT");
     setColor("t", "orange");
@@ -309,13 +311,13 @@ function setBandWait() {
 function setBandSuccess() {
     setParam("t", "SUCCESS");
     setColor("t", "green");
-    setInterval(function(){setVisible("t",false);},5000);
+    timerInterval=setInterval(function(){setVisible("t",false);},5000);
 }
 
 function setBandError() {
     setParam("t", "ERROR");
     setColor("t", "red");
-    setInterval(function(){setVisible("t",false);},5000);
+    timerInterval=setInterval(function(){setVisible("t",false);},5000);
 }
 
 function ltebandselection(e) {
@@ -369,7 +371,7 @@ function ltebandselection(e) {
                     contentType: 'application/xml',
                     data: `<request><NetworkMode>${nw}</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>${lteFlags}</LTEBand></request>`,
                     success: function(nd){
-                        // It may be either string or XMLDocument here
+                        /* It may be either string or XMLDocument here */
                         let doc;
                         if (typeof(nd)==="string" || nd instanceof String) {
                             doc = getXMLDocument(nd);
@@ -387,13 +389,113 @@ function ltebandselection(e) {
                             console.log("Error while setting band list");
                             setBandError();
                         }
+                        supportedBands();
                     },
                     error: function(request,status,error){
                         console.log("Net Mode Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
                         setBandError();
+                        supportedBands();
                     }
                 });
             }, UPDATE_MS);
+        }
+    });
+}
+
+/**
+ * Get a list of supported bands using tag items
+ * @param {Document} doc XML Document with list of supported bands
+ * @param {String} tag Name of the tag with bands
+ * @returns BigInt with bands mask
+ */
+function getBandFlags(doc, tag) {
+    let flags = 0n;
+
+    for (const lt of doc.querySelectorAll(tag)) {
+        for (const t of lt.childNodes) {
+            /* Skip 'All bands' element as it contains just FFFFs */
+            if (t.nodeName==="Name" && t.innerHTML.toLowerCase()==="all bands") break;
+
+            if (t.nodeName==="Value") {
+                try {
+                    let f=BigInt(`0x${t.innerHTML}`);
+                    flags|=f;
+                } catch(e){console.log("Error: Cannot parse band mask:",err.message);}
+            }
+        }
+    }
+
+    return flags;
+}
+
+function supportedBands() {
+    $.ajax({
+        type: "GET",
+        async: true,
+        url: '/api/net/net-mode',
+        error: function(request,status,error) {
+            console.log("Error: Active networks responce fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+        },
+        success: function(data) {
+            const doc = getXMLDocument(data);
+            if (!doc) { return; }
+
+            let flagsActive = 0n;
+            try {
+                do {
+                    const m=doc.querySelector("NetworkMode");
+                    if (!m) break;
+                    const mode = m.innerHTML;
+
+                    /* Check if 'All' (00) or 'LTE Only' is enabled */
+                    if (mode.indexOf("00")===-1 && mode.indexOf("03")===-1) break;
+        
+                    const t=doc.querySelector("LTEBand");
+                    if (!t) break;
+
+                    flagsActive=BigInt(`0x${t.innerHTML}`);
+                } while(0);
+            }
+            catch(err) {
+                console.log("Error: cannot parse band flags:",err.message);
+            }
+            console.log(`Active LTE flags: 0x${flagsActive.toString(16)}`);
+
+            $.ajax({
+                type: "GET",
+                async: true,
+                url: '/api/net/net-mode-list',
+                error: function(request,status,error) {
+                    console.log("Error: Supported networks responce fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+                },
+                success: function(data) {
+                    const doc = getXMLDocument(data);
+                    if (!doc) {
+                        return;
+                    }
+        
+                    /* LTE Bands */
+                    let flagsLte = getBandFlags(doc, "LTEBand");
+        
+                    let supportedLte = [];
+        
+                    let x=1;
+                    while (flagsLte!=0n) {
+                        if ((flagsLte & 1n) !== 0n) {
+                            supportedLte.push(x);
+                        }
+                        x++;
+                        flagsLte = flagsLte >> 1n;
+                    }
+
+                    setParam('support_lte', supportedLte.map(function(k){
+                        return `<span class="${ (flagsActive & (1n << BigInt(k-1))) !== 0n ? "band_on" : "band_off" }">B${k}</span>`;
+                    }).join('+'));
+        
+                    let report = `Supported LTE: ${supportedLte.map(function(k){return `B${k}`}).join('+')}`;
+                    console.log(report);
+                }
+            });
         }
     });
 }
@@ -408,10 +510,14 @@ const header = `<style>
     #rsrp,
     #sinr,
     #ul,
-    #dl {
+    #dl,
+    #support_lte {
         color: #b00;
         font-weight: strong;
     }
+
+    .band_on { color: blue; }
+    .band_off { color: grey; }
 
     #setband {
         font-weight:bolder;
@@ -458,13 +564,6 @@ const header = `<style>
             <li>RSSI:<span id="rssi">#</span></li>
         </ul>
     </div>
-    <div class="f">
-        <ul>
-            <li style="margin-right: 0px;"><a id="setband" href="#">Set LTE Bands</a></li>
-            <li><label>LTE Only</label>&nbsp;<input id="force4g" type="checkbox"></li>
-        </ul>
-    </div>
-    <div id="t"></div>
     <div class="f" id="status_3g">
         <ul>
             <li>RSCP:<span id="rscp">#</span></li>
@@ -484,11 +583,26 @@ const header = `<style>
             <li>Upload:<span id="ul">#</span></li>
         </ul>
     </div>
+</div>
+<div style="display:block;overflow: auto;">
+    <div class="f">
+        <ul>
+            <li><a id="setband" href="#">Set LTE Bands</a></li>
+            <li><label>LTE Only</label>&nbsp;<input id="force4g" type="checkbox"></li>
+        </ul>
+    </div>
+    <div id="t"></div>
+    <div class="f">
+        <ul>
+            <li>SUPPORTED LTE:<span id="support_lte"></span></li>
+        </ul>
+    </div>
 </div>`;
     document.body.insertAdjacentHTML("afterbegin", header);
     document.getElementById("setband").addEventListener (
         "click", ltebandselection, false
     );
+    supportedBands();
     setInterval(currentBand, UPDATE_MS);
 }
 
