@@ -206,7 +206,7 @@ function currentBand() {
                 if (mode === "WCDMA") {
                     const rscp = extractXML("rscp",doc);
                     const ecio = extractXML("ecio",doc);
-                    report += `\nRSCP : ${rsrq} EC/IO : ${ecio}`;
+                    report += `\nRSCP : ${rscp} EC/IO : ${ecio}`;
                     
                     setParam("rscp", rscp); barGraph("rscp", rscp, 3, -100, -70);
                     setParam("ecio", ecio); barGraph("ecio", ecio, 2, 0, 24);
