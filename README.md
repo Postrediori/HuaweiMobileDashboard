@@ -35,7 +35,7 @@ Dashboard with history and download/upload rate:
 
 ### Bookmark version
 
-* Create new bookmark in a browser and add the code from [ExtraAntennaStatus-min.js](ExtraAntennaStatus-min.js)for Huawei router or [NetgearEAS-min.js](NetgearEAS-min.js) for Netgear router file as bookmark URL
+* Create new bookmark in a browser and add the code from [ExtraAntennaStatus.min.js](ExtraAntennaStatus.min.js)for Huawei router or [NetgearEAS.min.js](NetgearEAS.min.js) for Netgear router file as bookmark URL
 * Navigate to mobile WiFi page, login into browser status and execute the bookmark.
 
 ### TamperMonkey addon version
