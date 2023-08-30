@@ -67,17 +67,17 @@ The script was tested on the following routers:
 
 ## Tested on
 
-* Firefox 116  & TamperMonkey 4.19 (addon version)
+* Firefox 116 & TamperMonkey 4.19 (addon version)
   * Ubuntu Linux 23.04
   * Windows 10
-  * Android 13
+* Firefox 116 on Android 13
 * MS Edge 116
   * Windows 10
 
 ## TODO
 
 * [x] Safer XML parser
-* [ ] LTE Band selector. It is possible to specify LTE bands, but without non-standard firmware it is impossible to check what LTE band is actually in use or what are the EARFCN frequency codes.
+* [x] LTE Band selector. It is possible to specify LTE bands, but without non-standard firmware it is impossible to check what LTE band is actually in use or what are the EARFCN frequency codes.
 * [ ] Adjust refresh rate. Now it is handled by `UPDATE_MS` variable in the script.
 
 ## Acknowledgments
