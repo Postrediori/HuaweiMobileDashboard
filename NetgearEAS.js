@@ -161,7 +161,7 @@ function currentBand() {
                     report += `\nRSCP : ${rscp}dBm EC/IO : ${ecio}dBm`;
                     
                     setParam("rscp", `${rscp}dBm`); barGraph("rscp", rscp, -100, -70);
-                    setParam("ecio", `${ecio}dBm`); barGraph("ecio", ecio, 0, 24);
+                    setParam("ecio", `${ecio}dBm`); barGraph("ecio", ecio, -10, -2);
                 }
                 else if (mode === "LTE") {
                     const rsrq = doc.wwan.signalStrength.rsrq;
@@ -243,7 +243,7 @@ const header = `<style>
     </div>
     <div class="f" id="status_3g">
         RSCP:<span id="rscp">#</span><div id="brscp"></div>
-        EC/Io:<span id="ecio">#</span><div id="becio"></div>
+        EC/IO:<span id="ecio">#</span><div id="becio"></div>
     </div>
     <div class="f" id="status_lte">
         RSRQ:<span id="rsrq">#</span><div id="brsrq"></div>
