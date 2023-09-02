@@ -18,14 +18,6 @@
  */
 const UPDATE_MS = 2000;
 
-const SIZE_KB = 1024;
-const SIZE_MB = 1024 * 1024;
-const SIZE_GB = 1024 * 1024 * 1024;
-
-const RATE_BPS = "bit/s";
-const RATE_KBPS = "KBit/s";
-const RATE_MBPS = "MBit/s";
-
 /**
  * Global variables
  */
@@ -39,7 +31,16 @@ let boxcar = 100, gt = 3, gw = boxcar*(gt+1), gh = 30;
  * @returns Formatted string with proper units (kbps, mpbs, etc)
  */
 function formatBandwidth(bytesPerSec) {
+    const SIZE_KB = 1024;
+    const SIZE_MB = 1024 * 1024;
+    const SIZE_GB = 1024 * 1024 * 1024;
+    
+    const RATE_BPS = "bit/s";
+    const RATE_KBPS = "KBit/s";
+    const RATE_MBPS = "MBit/s";
+
     const bitsPerSec = bytesPerSec * 8;
+    
     if (bitsPerSec<SIZE_KB) {
         return `${bitsPerSec}${RATE_BPS}`;
     }
@@ -97,7 +98,7 @@ function setMode(newMode) {
         setVisible("status_3g", false);
         setVisible("status_lte", false);
 
-        for (let k in history) { if (Array.isArray(history[k])) { history[k] = []} else { history[k] = 0;} }
+        for (let k in history) history[k] = Array.isArray(history[k]) ? [] : 0;
 
         if (mode === "WCDMA") {
             setVisible("status_3g", true);
@@ -158,10 +159,10 @@ function currentBand() {
                 if (mode === "WCDMA") {
                     const rscp = doc.wwan.signalStrength.rscp;
                     const ecio = doc.wwan.signalStrength.ecio;
-                    report += `\nRSCP : ${rscp}dBm EC/IO : ${ecio}dBm`;
+                    report += `\nRSCP : ${rscp}dBm EC/IO : ${ecio}dB`;
                     
                     setParam("rscp", `${rscp}dBm`); barGraph("rscp", rscp, -100, -70);
-                    setParam("ecio", `${ecio}dBm`); barGraph("ecio", ecio, -10, -2);
+                    setParam("ecio", `${ecio}dB`); barGraph("ecio", ecio, -10, -2);
                 }
                 else if (mode === "LTE") {
                     const rsrq = doc.wwan.signalStrength.rsrq;

@@ -18,18 +18,6 @@
  */
 const UPDATE_MS = 2000;
 
-const NETWORK_MODE_2G = "0";
-const NETWORK_MODE_3G = "2";
-const NETWORK_MODE_4G = "7";
-
-const SIZE_KB = 1024;
-const SIZE_MB = 1024 * 1024;
-const SIZE_GB = 1024 * 1024 * 1024;
-
-const RATE_BPS = "bit/s";
-const RATE_KBPS = "KBit/s";
-const RATE_MBPS = "MBit/s";
-
 /**
  * Global variables
  */
@@ -77,15 +65,15 @@ function getHTMLDocument(data) {
 
 /**
  * Extract tag from XML
- * @param {String} tag Name of the tag
- * @param {String} data Document object with XML data
+ * @param {String} tagName Name of the tag
+ * @param {String} doc Document object with XML data
  * @returns Contents of the tag or null
  */
-function extractXML(tag, document) {
+function extractXML(tagName, doc) {
     try {
-        const tags = document.getElementsByTagName(tag);
-        if (tags.length > 0) {
-            return tags[0].innerHTML;
+        const tags = doc.querySelector(tagName);
+        if (tags) {
+            return tags.innerHTML;
         }
     }
     catch (err) {
@@ -106,19 +94,17 @@ function getDocumentCsrfToken(data) {
         return null;
     }
 
-    let token = null;
-    let metaTags = doc.getElementsByTagName("meta");
+    let metaTags = doc.querySelectorAll("meta");
     for (const tag of metaTags) {
         if (tag.getAttribute("name") === "csrf_token") {
-            let tokenAttribute = tag.getAttribute("content");
-            if (tokenAttribute) {
-                token = tokenAttribute;
-                break;
+            let token = tag.getAttribute("content");
+            if (token) {
+                return token;
             }
         }
     }
 
-    return token;
+    return null;
 }
 
 /**
@@ -127,21 +113,23 @@ function getDocumentCsrfToken(data) {
  * @returns Error code or zero in case operation was successfull
  */
 function getResponseStatus(doc) {
-    let tags = doc.getElementsByTagName("response");
-    if (tags.length>0 && tags[0].innerHTML === "OK") {
+    let tag = doc.querySelector("response");
+    if (tag && tag.innerHTML === "OK") {
         return 0;
     }
     else {
-        let errtags = doc.getElementsByTagName("error");
-        if (errtags.length>0) {
-            let err = {};
-            for (const t of errtags[0].children) {
-                err[t.nodeName] = t.innerHTML;
+        let errtag = doc.querySelector("error");
+        if (errtag) {
+            let report = "Received response"
+            for (const t of errtag.children) {
+                if (t.innerHTML!=="") {
+                    report += ` ${t.nodeName}:${t.innerHTML}`;
+                }
             }
-            console.log("Error: Received responce with error:", err);
+            console.log("Error:", report);
         }
         else {
-            console.log("Error: Received responce with unknown status");
+            console.log("Error: Received response with unknown status");
         }
         return 1;
     }
@@ -153,6 +141,14 @@ function getResponseStatus(doc) {
  * @returns Formatted string with proper units (kbps, mpbs, etc)
  */
 function formatBandwidth(bytesPerSec) {
+    const SIZE_KB = 1024;
+    const SIZE_MB = 1024 * 1024;
+    const SIZE_GB = 1024 * 1024 * 1024;
+    
+    const RATE_BPS = "bit/s";
+    const RATE_KBPS = "KBit/s";
+    const RATE_MBPS = "MBit/s";
+
     let bitsPerSec = bytesPerSec * 8;
 
     if (bitsPerSec<SIZE_KB) {
@@ -167,11 +163,24 @@ function formatBandwidth(bytesPerSec) {
 }
 
 /**
+ * Remove trailing unit of the value
+ * @param {String} s Signal value with unit
+ * @returns Value without unit
+ */
+function clearUnit(s) {
+    return s.replace(/dB(m)?$/,"");
+}
+
+/**
  * Convert Huawei's internal network mode ID to human format
  * @param {String} mode Network mode ID
  * @returns Human readable networking mode (GSM, WCDMA, LTE)
  */
 function getModeDescription(mode) {
+    const NETWORK_MODE_2G = "0";
+    const NETWORK_MODE_3G = "2";
+    const NETWORK_MODE_4G = "7";
+
     switch(mode) {
     case NETWORK_MODE_2G: return "GSM";
     case NETWORK_MODE_3G: return "WCDMA";
@@ -233,8 +242,7 @@ function setMode(newMode) {
     }
 }
 
-function barGraph(p, v, c, min, max) {
-    let val = v.slice(0, -c);
+function barGraph(p, val, min, max) {
     if(val > max){val = max;}
     if(val < min){val = min;}
     history[p].unshift(val);
@@ -284,8 +292,8 @@ function currentBand() {
                     const ecio = extractXML("ecio",doc);
                     report += `\nRSCP : ${rscp} EC/IO : ${ecio}`;
                     
-                    setParam("rscp", rscp); barGraph("rscp", rscp, 3, -100, -70);
-                    setParam("ecio", ecio); barGraph("ecio", ecio, 2, -10, -2);
+                    setParam("rscp", rscp); barGraph("rscp", clearUnit(rscp), -100, -70);
+                    setParam("ecio", ecio); barGraph("ecio", clearUnit(ecio), -10, -2);
                 }
                 else if (mode === "LTE") {
                     const rsrq = extractXML("rsrq",doc);
@@ -293,9 +301,9 @@ function currentBand() {
                     const sinr = extractXML("sinr",doc);
                     report += `\nRSRQ/RSRP/SINR : ${rsrq}/${rsrp}/${sinr}`;
                     
-                    setParam("rsrp", rsrp); barGraph("rsrp", rsrp, 3, -130, -60);
-                    setParam("rsrq", rsrq); barGraph("rsrq", rsrq, 2, -16, -3);
-                    setParam("sinr", sinr); barGraph("sinr", sinr, 2, 0, 24);
+                    setParam("rsrp", rsrp); barGraph("rsrp", clearUnit(rsrp), -130, -60);
+                    setParam("rsrq", rsrq); barGraph("rsrq", clearUnit(rsrq), -16, -3);
+                    setParam("sinr", sinr); barGraph("sinr", clearUnit(sinr), 0, 24);
                 }
 
                 console.log(report);
@@ -308,7 +316,7 @@ function currentBand() {
         async: true,
         url: '/api/monitoring/traffic-statistics',
         error: function(request,status,error) {
-            console.log("Error: Traffic statistics responce fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+            console.log("Error: Traffic statistics response fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
         },
         success: function(data) {
             const doc = getXMLDocument(data);
@@ -347,8 +355,8 @@ function setBandError() {
 
 function ltebandselection(e) {
     let band = prompt("Please input desirable LTE band number. " +
-        "If you want to use multiple LTE bands, write down multiple band number joined with '+'." +
-        "If you want to use every supported bands, write down 'ALL'. (e.g. 3+7 / 1+3 / 1+3+8)." +
+        "If you want to use multiple LTE bands, write down multiple band number joined with '+'. " +
+        "If you want to use every supported bands, write down 'ALL'. (e.g. 3+7 / 1+3 / 1+3+8). " +
         "Leave this empty to leave as is.", "ALL");
     if (band==null || band==="") {
         console.log("No band selected");
@@ -445,7 +453,7 @@ function getBandFlags(doc, tag) {
                 try {
                     let f=BigInt(`0x${t.innerHTML}`);
                     flags|=f;
-                } catch(e){console.log("Error: Cannot parse band mask:",err.message);}
+                } catch(err){console.log("Error: Cannot parse band mask:",err.message);}
             }
         }
     }
@@ -459,7 +467,7 @@ function supportedBands() {
         async: true,
         url: '/api/net/net-mode',
         error: function(request,status,error) {
-            console.log("Error: Active networks responce fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+            console.log("Error: Active networks response fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
         },
         success: function(data) {
             const doc = getXMLDocument(data);
@@ -476,9 +484,9 @@ function supportedBands() {
                     if (mode.indexOf("00")===-1 && mode.indexOf("03")===-1) break;
         
                     const t=doc.querySelector("LTEBand");
-                    if (!t) break;
-
-                    flagsActive=BigInt(`0x${t.innerHTML}`);
+                    if (t) {
+                        flagsActive=BigInt(`0x${t.innerHTML}`);
+                    }
                 } while(0);
             }
             catch(err) {
@@ -486,12 +494,18 @@ function supportedBands() {
             }
             console.log(`Active LTE flags: 0x${flagsActive.toString(16)}`);
 
+            if (flagsActive===0n) {
+                /* Don't show LTE dashboard if modem doesn't support it */
+                setVisible("lte_setup", false);
+                return;
+            }
+
             $.ajax({
                 type: "GET",
                 async: true,
                 url: '/api/net/net-mode-list',
                 error: function(request,status,error) {
-                    console.log("Error: Supported networks responce fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+                    console.log("Error: Supported networks response fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
                 },
                 success: function(data) {
                     const doc = getXMLDocument(data);
@@ -605,7 +619,7 @@ const header = `<style>
         </ul>
     </div>
 </div>
-<div style="display:block;overflow: auto;">
+<div id="lte_setup" style="display:block;overflow: auto;">
     <div class="f">
         <ul>
             <li><a id="setband" href="#">Set LTE Bands</a></li>
