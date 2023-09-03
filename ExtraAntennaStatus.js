@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Huawei Extra Antenna Status dashboard
 // @namespace    http://github.com/Postrediori/HuaweiMobileDashboard
-// @version      0.2
+// @version      0.3
 // @description  Additional dashboard with antenna signal data
 // @author       Postrediori
 // @match        http://192.168.8.1/*
@@ -393,7 +393,15 @@ function ltebandselection(e) {
                 return;
             }
 
-            let nw=document.getElementById("force4g").checked ? "03" : "00";
+            let nw = function(mode) {
+                switch(mode) {
+                case "0": return "00"; /* LTE > WCDMA > GSM */
+                case "1": return "0103"; /* LTE > GSM */
+                case "2": return "0203"; /* LTE > WCDMA */
+                case "3": return "03"; /* LTE Only */
+                }
+                return "00";
+            }(document.getElementById("mode_lte").value);
 
             setTimeout(function() {
                 $.ajax({
@@ -623,7 +631,12 @@ const header = `<style>
     <div class="f">
         <ul>
             <li><a id="setband" href="#">Set LTE Bands</a></li>
-            <li><label>LTE Only</label>&nbsp;<input id="force4g" type="checkbox"></li>
+            <li><label>Mode</label>&nbsp;<select id="mode_lte">
+                <option value="0">Auto</option>
+                <option value="1">LTE > GSM</option>
+                <option value="2">LTE > WCDMA</option>
+                <option value="3" selected="on">LTE Only</option>
+            </select></li>
         </ul>
     </div>
     <div id="t"></div>
