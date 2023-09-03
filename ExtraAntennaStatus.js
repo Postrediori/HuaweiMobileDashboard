@@ -494,12 +494,6 @@ function supportedBands() {
             }
             console.log(`Active LTE flags: 0x${flagsActive.toString(16)}`);
 
-            if (flagsActive===0n) {
-                /* Don't show LTE dashboard if modem doesn't support it */
-                setVisible("lte_setup", false);
-                return;
-            }
-
             $.ajax({
                 type: "GET",
                 async: true,
@@ -619,7 +613,7 @@ const header = `<style>
         </ul>
     </div>
 </div>
-<div id="lte_setup" style="display:block;overflow: auto;">
+<div style="display:block;overflow: auto;">
     <div class="f">
         <ul>
             <li><a id="setband" href="#">Set LTE Bands</a></li>
