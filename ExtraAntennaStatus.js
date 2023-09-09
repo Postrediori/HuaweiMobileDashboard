@@ -18,12 +18,16 @@
  */
 const UPDATE_MS = 2000;
 
+const SIZE_KB = 1024;
+const SIZE_MB = 1024 * 1024;
+const SIZE_GB = 1024 * 1024 * 1024;
+
 /**
  * Global variables
  */
 let mode = "";
-let history = {"sinr": [], "rsrp": [], "rsrq": [], "rscp": [], "ecio": []};
-let boxcar = 100, gt = 3, gw = boxcar*(gt+1), gh = 30;
+let history = {sinr: [], rsrp: [], rsrq: [], rscp: [], ecio: [], dlul:[]};
+let boxcar = 85, gt = 3, gw = boxcar*(gt+1), gh = 30, ghd = gh * 1.75;
 let timerInterval;
 
 function getDocument(data, type) {
@@ -141,10 +145,6 @@ function getResponseStatus(doc) {
  * @returns Formatted string with proper units (kbps, mpbs, etc)
  */
 function formatBandwidth(bytesPerSec) {
-    const SIZE_KB = 1024;
-    const SIZE_MB = 1024 * 1024;
-    const SIZE_GB = 1024 * 1024 * 1024;
-    
     const RATE_BPS = "bit/s";
     const RATE_KBPS = "KBit/s";
     const RATE_MBPS = "MBit/s";
@@ -262,6 +262,62 @@ function barGraph(p, val, min, max) {
     document.getElementById("b" + p).innerHTML = html;
 }
 
+function nearestFib(x) {
+    let f1=0, f2=1, fn = 0;
+  
+    for (let n=1; n<20; n++) {
+        fn = f1 + f2;
+        if (x<fn) {
+          break;
+        }
+        f2 = f1;
+        f1 = fn;
+    }
+    return fn;
+}
+
+function barGraphDlUl(p, valDl, valUl) {
+    history[p].unshift([valDl*8, valUl*8]);
+    if(history[p].length > boxcar){history[p].pop();}
+
+    let maxDlUl = history[p].reduce( (accum,current) => [Math.max(accum[0],current[0]),Math.max(accum[1],current[1])] );
+    maxDlUl = Math.max(maxDlUl[0], maxDlUl[1]);
+    const maxMb = nearestFib(maxDlUl / SIZE_MB);
+
+    const maxPlot = maxMb * SIZE_MB;
+
+    let html = `<svg version="1.1" viewBox="0 0 ${gw} ${ghd}" width="${gw}" height="${ghd}" preserveAspectRatio="xMaxYMax slice" style="border:1px solid #ccc;padding:1px;margin-top:-6px;width:${gw}px;">`;
+
+    for (let x = 0; x < history[p].length; x++) {
+        let dl = history[p][x][0], ul = history[p][x][1];
+
+        let pax = (gt + 1) * (x + 1);
+        let pay = ghd - 1;
+
+        let pbyDl = ghd * (1 - dl / maxPlot);
+        let pbyUl = ghd * (1 - ul / maxPlot);
+
+        let pby1 = pay, pby2 = pay;
+        let color1 = "#DDCC77", color2 = "grey";
+        if (ul < dl) {
+            pby1 = pbyUl;
+            pby2 = pbyDl;
+            color2 = "#332288";
+        }
+        else {
+            pby1 = pbyDl;
+            pby2 = pbyUl;
+            color2 = "#88CCEE";
+        }
+
+        html += `<line x1="${pax}" y1="${pay}" x2="${pax}" y2="${pby1}" stroke="${color1}" stroke-width="${gt}"></line>`;
+        html += `<line x1="${pax}" y1="${pby1}" x2="${pax}" y2="${pby2}" stroke="${color2}" stroke-width="${gt}"></line>`;
+    }
+    html += `<text x="${gw}" y="0" dominant-baseline="hanging" text-anchor="end" style="fill:gray;">${maxMb.toFixed(0)}MBit/s</text>`;
+    html += "</svg>";
+    document.getElementById("b" + p).innerHTML = html;
+}
+
 /**
  * Update UI dashboard with current status of the modem
  */
@@ -323,10 +379,13 @@ function currentBand() {
             if (doc) {
                 const dl = extractXML("CurrentDownloadRate", doc);
                 const ul = extractXML("CurrentUploadRate", doc);
-                const report = `Download : ${dl} Upload : ${ul}`;
+                const dlStr = formatBandwidth(dl);
+                const ulStr = formatBandwidth(ul);
+                const report = `Download : ${dlStr} Upload : ${ulStr}`;
     
-                setParam("dl", formatBandwidth(dl));
-                setParam("ul", formatBandwidth(ul));
+                setParam("dl", dlStr);
+                setParam("ul", ulStr);
+                barGraphDlUl("dlul", dl, ul);
 
                 console.log(report);
             }
@@ -618,7 +677,7 @@ const header = `<style>
         <ul>
             <li>Download:<span id="dl">#</span></li>
             <li>Upload:<span id="ul">#</span></li>
-        </ul>
+        </ul><div id="bdlul"></div>
     </div>
 </div>
 <div style="display:block;overflow: auto;">

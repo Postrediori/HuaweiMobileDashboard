@@ -15,7 +15,7 @@ Additionally, dashboard for the Huawei routers allows fixation of LTE bands.
 
 ### Huawei version
 
-Dashboard with bar plot of signal history:
+Dashboard with bar plot of signal history on E5573 mobile router:
 
 ![Dashboard on E5573 router web UI](images/e5573.png)
 
@@ -31,17 +31,17 @@ Now active inactive bands are greyed out in the dashboard:
 
 ![Setting specific bands and using only LTE](images/e5573_5.png)
 
-E8372, LTE USB modem:
+Dashboard on E8372 USB modem:
 
 ![Dashboard on E8372 router web UI](images/e8372.png)
 
-Dashboard on E5330As-2. LTE band selection is not available for 3g-only mobile router:
+Dashboard on E5330 router:
 
 ![Dashboard on E5330 router web UI](images/e5330.png)
 
 ### Netgear version
 
-Dashboard with history and download/upload rate:
+Dashboard with history and download/upload rate on Nightwawk M2 router:
 
 ![Dashboard on Netgear web UI](images/mr2100.png)
 
@@ -73,9 +73,9 @@ The script was tested on the following routers:
 
 ### Huawei
 
-* E5330As-2
-* E5573s-320
-* E8372h-608
+* E5330
+* E5573
+* E8372
 
 ### Netgear
 
