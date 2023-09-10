@@ -19,6 +19,15 @@ Dashboard with bar plot of signal history on E5573 mobile router:
 
 ![Dashboard on E5573 router web UI](images/e5573.png)
 
+Select one of LTE modes:
+
+* **Auto** - automatic switch between LTE/3G/2G
+* **LTE > GSM** - Use LTE with GSM fallback (e.g. for SMS, USSD)
+* **LTE > WCDMA** - Use LTE with 3G fallback
+* **LTE Only**
+
+![Setting custom LTE bands](images/e5573_1.png)
+
 Specifying LTE bands:
 
 ![Setting custom LTE bands](images/e5573_2.png)
