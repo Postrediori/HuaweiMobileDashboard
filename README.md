@@ -54,6 +54,10 @@ Dashboard with history and download/upload rate on Nightwawk M2 router:
 
 ![Dashboard on Netgear web UI](images/mr2100.png)
 
+Dashboard on Nightwawk AirCard 785s router:
+
+![Dashboard on Netgear AC785s](images/ac785s.png)
+
 ## Installation & Usage
 
 ### Bookmark version
@@ -88,6 +92,7 @@ The script was tested on the following routers:
 
 ### Netgear
 
+* AirCard 785s
 * Nighthawk M2 (MR2100)
 
 ## Tested on
@@ -112,8 +117,6 @@ Tested with TamperMonkey 4.19
 
 ## TODO
 
-* [x] Safer XML parser
-* [x] LTE Band selector. It is possible to specify LTE bands, but without non-standard firmware it is impossible to check what LTE band is actually in use or what are the EARFCN frequency codes.
 * [ ] Adjust refresh rate. Now it is handled by `UPDATE_MS` variable in the script.
 
 ## Acknowledgments

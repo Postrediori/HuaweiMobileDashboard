@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netgear Extra Antenna Status
 // @namespace    http://github.com/Postrediori/HuaweiMobileDashboard
-// @version      0.3
+// @version      0.5
 // @description  Additional dashboard with antenna signal data
 // @author       Postrediori
 // @match        http://192.168.1.1/*
@@ -18,6 +18,8 @@
  */
 const UPDATE_MS = 2000;
 
+const boxcar = 78, gt = 3, gw = boxcar*(gt+1), gh = 30, ghd = gh * 1.75;
+
 const SIZE_KB = 1024;
 const SIZE_MB = 1024 * 1024;
 const SIZE_GB = 1024 * 1024 * 1024;
@@ -27,7 +29,6 @@ const SIZE_GB = 1024 * 1024 * 1024;
  */
 let mode = "";
 let history = {sinr: [], rsrp: [], rsrq: [], rscp: [], ecio: [], dl: 0, ul: 0, dlultime:0, dlul:[]};
-let boxcar = 85, gt = 3, gw = boxcar*(gt+1), gh = 30, ghd = gh * 1.75;
 
 /**
  * Format download/upload value
@@ -59,6 +60,7 @@ function formatBandwidth(bytesPerSec) {
  */
 function getModeDescription(mode) {
     switch(mode) {
+    case "GsmService": return "GSM";
     case "WcdmaService": return "WCDMA";
     case "LteService": return "LTE";
     }
@@ -98,13 +100,18 @@ function setMode(newMode) {
         setVisible("status_3g", false);
         setVisible("status_lte", false);
 
+        setVisible("u3g", false);
+        setVisible("ulte", false);
+
         for (let k in history) history[k] = Array.isArray(history[k]) ? [] : 0;
 
         if (mode === "WCDMA") {
             setVisible("status_3g", true);
+            setVisible("u3g", true);
         }
         else if (mode === "LTE") {
             setVisible("status_lte", true);
+            setVisible("ulte", true);
         }
     }
 }
@@ -201,17 +208,29 @@ function currentBand() {
             const doc = JSON.parse(data);
             if (doc) {
                 const currentMode = getModeDescription(doc.wwan.currentNWserviceType);
-                const caStatus = doc.wwan.ca.SCCcount;
+                let caStatus = doc.wwan.ca.SCCcount;
+                if (typeof caStatus==='undefined') {
+                    caStatus = 0;
+                }
 
                 const fullMode = `${currentMode}${caStatus===0?"":"-A"}`;
                 let report = `Network mode : ${fullMode}`;
                 setParam("mode", fullMode);
                 setMode(currentMode);
 
-                const rssi = doc.wwan.signalStrength.rssi;
-                report += `\nRSSI : ${rssi}dBm`;
+                const rssi = `${doc.wwan.signalStrength.rssi}dBm`;
+                report += `\nRSSI : ${rssi}`;
+                setParam("rssi", rssi);
 
-                setParam("rssi", `${rssi}dBm`);
+                const plmn = doc.wwanadv.MCC + doc.wwanadv.MNC;
+                report += `\nPLMN : ${plmn}`;
+                setParam("plmn", plmn);
+
+                const cellid = doc.wwanadv.cellId;
+                const cellidhex = cellid.toString(16).toUpperCase();
+                report += `\nCell ID : ${cellidhex} / ${cellid}`;
+                setParam("cellidhex", cellidhex);
+                setParam("cellid", cellid);
 
                 if (mode === "WCDMA") {
                     const rscp = doc.wwan.signalStrength.rscp;
@@ -220,6 +239,15 @@ function currentBand() {
                     
                     setParam("rscp", `${rscp}dBm`); barGraph("rscp", rscp, -100, -70);
                     setParam("ecio", `${ecio}dB`); barGraph("ecio", ecio, -10, -2);
+
+                    const rnc = cellid >> 16;
+                    const id = cellid & 0xffff;
+                    setParam("rnc", rnc);
+
+                    const nb = Math.floor(id / 10);
+                    const cc = id - nb * 10;
+                    setParam("nb", nb);
+                    setParam("cc", cc);
                 }
                 else if (mode === "LTE") {
                     const rsrq = doc.wwan.signalStrength.rsrq;
@@ -230,6 +258,11 @@ function currentBand() {
                     setParam("rsrp", `${rsrp}dBm`); barGraph("rsrp", rsrp, -130, -60);
                     setParam("rsrq", `${rsrq}dB`); barGraph("rsrq", rsrq, -16, -3);
                     setParam("sinr", `${sinr}dB`); barGraph("sinr", sinr, 0, 24);
+
+                    const enb = cellid >> 8;
+                    const id = cellid & 0xff;
+                    setParam("enb", enb);
+                    setParam("cell", id);
                 }
 
                 const dl = doc.wwan.dataTransferredRx;
@@ -237,7 +270,7 @@ function currentBand() {
 
                 const dlultime = new Date().getTime();
 
-                if (history["dlultime"]!==0) {
+                if (history.dlultime!==0) {
                     const t = 1000 / (dlultime - history.dlultime);
                     const dlRate = history.dl===0 ? 0 : Math.floor((dl - history.dl) * t);
                     const ulRate = history.ul===0 ? 0 : Math.floor((ul - history.ul) * t);
@@ -265,6 +298,10 @@ function statusHeader() {
 const header = `<style>
     #mode,
     #rssi,
+    #plmn,
+    #cellidhex,#cellid,
+    #nb,#cc,#rnc,
+    #enb,#cell,
     #rscp,
     #ecio,
     #rsrq,
@@ -300,6 +337,19 @@ const header = `<style>
         <ul>
             <li>Network mode:<span id="mode">#</span></li>
             <li>RSSI:<span id="rssi">#</span></li>
+        </ul>
+        <ul>
+            <li>PLMN:<span id="plmn">#</span></li>
+        </ul>
+        <ul>
+            <li>Cell ID:<span id="cellidhex">#</span>/<span id="cellid">#</span></li>
+        </ul>
+        <ul id="u3g">
+            <li>NB / Cell:<span id="nb">#</span>/<span id="cc">#</span></li>
+            <li>RNC-ID:<span id="rnc">#</span></li>
+        </ul>
+        <ul id="ulte">
+            <li>eNB / Cell:<span id="enb">#</span>/<span id="cell">#</span></li>
         </ul>
     </div>
     <div class="f" id="status_3g">

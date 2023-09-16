@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Huawei Extra Antenna Status dashboard
 // @namespace    http://github.com/Postrediori/HuaweiMobileDashboard
-// @version      0.3
+// @version      0.5
 // @description  Additional dashboard with antenna signal data
 // @author       Postrediori
 // @match        http://192.168.8.1/*
@@ -18,6 +18,8 @@
  */
 const UPDATE_MS = 2000;
 
+let boxcar = 80, gt = 3, gw = boxcar*(gt+1), gh = 30, ghd = gh * 1.75;
+
 const SIZE_KB = 1024;
 const SIZE_MB = 1024 * 1024;
 const SIZE_GB = 1024 * 1024 * 1024;
@@ -27,7 +29,6 @@ const SIZE_GB = 1024 * 1024 * 1024;
  */
 let mode = "";
 let history = {sinr: [], rsrp: [], rsrq: [], rscp: [], ecio: [], dlul:[]};
-let boxcar = 85, gt = 3, gw = boxcar*(gt+1), gh = 30, ghd = gh * 1.75;
 let timerInterval;
 
 function getDocument(data, type) {
@@ -117,12 +118,12 @@ function getDocumentCsrfToken(data) {
  * @returns Error code or zero in case operation was successfull
  */
 function getResponseStatus(doc) {
-    let tag = doc.querySelector("response");
+    const tag = doc.querySelector("response");
     if (tag && tag.innerHTML === "OK") {
         return 0;
     }
     else {
-        let errtag = doc.querySelector("error");
+        const errtag = doc.querySelector("error");
         if (errtag) {
             let report = "Received response"
             for (const t of errtag.children) {
@@ -231,13 +232,21 @@ function setMode(newMode) {
         setVisible("status_3g", false);
         setVisible("status_lte", false);
 
-        for (let k in history) { history[k] = []; }
+        setVisible("ucellid", false);
+        setVisible("u3g", false);
+        setVisible("ulte", false);
+
+        for (let k in history) history[k] = [];
 
         if (mode === "WCDMA") {
             setVisible("status_3g", true);
+            setVisible("ucellid", true);
+            setVisible("u3g", true);
         }
         else if (mode === "LTE") {
             setVisible("status_lte", true);
+            setVisible("ucellid", true);
+            setVisible("ulte", true);
         }
     }
 }
@@ -264,11 +273,11 @@ function barGraph(p, val, min, max) {
 
 function nearestFib(x) {
     let f1=0, f2=1, fn = 0;
-  
+
     for (let n=1; n<20; n++) {
         fn = f1 + f2;
         if (x<fn) {
-          break;
+            break;
         }
         f2 = f1;
         f1 = fn;
@@ -339,27 +348,56 @@ function currentBand() {
                 setMode(currentMode);
 
                 const rssi = extractXML("rssi", doc);
+                setParam("rssi", rssi);
                 report += `\nRSSI : ${rssi}`;
 
-                setParam("rssi", rssi);
+                const cellid = Number(extractXML("cell_id", doc));
+                const cellidhex = cellid.toString(16).toUpperCase();
+
+                setParam("cellidhex", cellidhex);
+                setParam("cellid", cellid);
+                report += `\nCell ID : ${cellidhex} / ${cellid}`;
 
                 if (mode === "WCDMA") {
                     const rscp = extractXML("rscp",doc);
                     const ecio = extractXML("ecio",doc);
                     report += `\nRSCP : ${rscp} EC/IO : ${ecio}`;
-                    
+
                     setParam("rscp", rscp); barGraph("rscp", clearUnit(rscp), -100, -70);
                     setParam("ecio", ecio); barGraph("ecio", clearUnit(ecio), -10, -2);
+
+                    const psc = extractXML("sc",doc);
+                    setParam("psc", psc);
+
+                    const rnc = cellid >> 16;
+                    const id = cellid & 0xffff;
+                    setParam("rnc", rnc);
+                    report += `\nRNC-ID : ${rnc}`;
+
+                    const nb = Math.floor(id / 10);
+                    const cc = id - nb * 10;
+                    setParam("nb", nb);
+                    setParam("cc", cc);
+                    report += `\NB ID / Cell : ${nb} / ${cc}`;
                 }
                 else if (mode === "LTE") {
                     const rsrq = extractXML("rsrq",doc);
                     const rsrp = extractXML("rsrp",doc);
                     const sinr = extractXML("sinr",doc);
                     report += `\nRSRQ/RSRP/SINR : ${rsrq}/${rsrp}/${sinr}`;
-                    
+
                     setParam("rsrp", rsrp); barGraph("rsrp", clearUnit(rsrp), -130, -60);
                     setParam("rsrq", rsrq); barGraph("rsrq", clearUnit(rsrq), -16, -3);
                     setParam("sinr", sinr); barGraph("sinr", clearUnit(sinr), 0, 24);
+
+                    const pci = extractXML("pci",doc);
+                    setParam("pci", pci);
+
+                    const enb = cellid >> 8;
+                    const id = cellid & 0xff;
+                    setParam("enb", enb);
+                    setParam("cell", id);
+                    report += `\neNB / Cell : ${enb} / ${id}`;
                 }
 
                 console.log(report);
@@ -381,13 +419,31 @@ function currentBand() {
                 const ul = extractXML("CurrentUploadRate", doc);
                 const dlStr = formatBandwidth(dl);
                 const ulStr = formatBandwidth(ul);
-                const report = `Download : ${dlStr} Upload : ${ulStr}`;
-    
+
                 setParam("dl", dlStr);
                 setParam("ul", ulStr);
                 barGraphDlUl("dlul", dl, ul);
 
-                console.log(report);
+                console.log(`Download : ${dlStr} Upload : ${ulStr}`);
+            }
+        }
+    });
+
+    $.ajax({
+        type: "GET",
+        async: true,
+        url: '/api/net/current-plmn',
+        error: function(request,status,error) {
+            console.log("Error: PLMN status response fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+        },
+        success: function(data) {
+            const doc = getXMLDocument(data);
+            if (doc) {
+                const plmn = extractXML("Numeric", doc);
+
+                setParam("plmn", plmn);
+
+                console.log(`PLMN : ${plmn}`);
             }
         }
     });
@@ -444,7 +500,7 @@ function ltebandselection(e) {
         url: '/html/home.html',
         error: function(request,status,error){
             console.log("Token Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
-        },            
+        },
         success: function(data){
             let token = getDocumentCsrfToken(data);
             if (!token) {
@@ -549,7 +605,7 @@ function supportedBands() {
 
                     /* Check if 'All' (00) or 'LTE Only' is enabled */
                     if (mode.indexOf("00")===-1 && mode.indexOf("03")===-1) break;
-        
+
                     const t=doc.querySelector("LTEBand");
                     if (t) {
                         flagsActive=BigInt(`0x${t.innerHTML}`);
@@ -573,12 +629,12 @@ function supportedBands() {
                     if (!doc) {
                         return;
                     }
-        
+
                     /* LTE Bands */
                     let flagsLte = getBandFlags(doc, "LTEBand");
-        
+
                     let supportedLte = [];
-        
+
                     let x=1;
                     while (flagsLte!=0n) {
                         if ((flagsLte & 1n) !== 0n) {
@@ -591,7 +647,7 @@ function supportedBands() {
                     setParam('support_lte', supportedLte.map(function(k){
                         return `<span class="${ (flagsActive & (1n << BigInt(k-1))) !== 0n ? "band_on" : "band_off" }">B${k}</span>`;
                     }).join('+'));
-        
+
                     let report = `Supported LTE: ${supportedLte.map(function(k){return `B${k}`}).join('+')}`;
                     console.log(report);
                 }
@@ -604,6 +660,10 @@ function statusHeader() {
 const header = `<style>
     #mode,
     #rssi,
+    #plmn,
+    #cellidhex,#cellid,
+    #nb,#cc,#rnc,#psc,
+    #enb,#cell,#pci,
     #rscp,
     #ecio,
     #rsrq,
@@ -662,6 +722,21 @@ const header = `<style>
         <ul>
             <li>Network mode:<span id="mode">#</span></li>
             <li>RSSI:<span id="rssi">#</span></li>
+        </ul>
+        <ul>
+            <li>PLMN:<span id="plmn">#</span></li>
+        </ul>
+        <ul id="ucellid">
+            <li>Cell ID:<span id="cellidhex">#</span>/<span id="cellid">#</span></li>
+        </ul>
+        <ul id="u3g">
+            <li>NB ID / Cell:<span id="nb">#</span>/<span id="cc">#</span></li>
+            <li>RNC-ID:<span id="rnc">#</span></li>
+            <li>SC:<span id="psc">#</span></li>
+        </ul>
+        <ul id="ulte">
+            <li>eNB / Cell:<span id="enb">#</span>/<span id="cell">#</span></li>
+            <li>PCI:<span id="pci">#</span></li>
         </ul>
     </div>
     <div class="f" id="status_3g">
