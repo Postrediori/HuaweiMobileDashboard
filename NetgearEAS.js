@@ -41,7 +41,7 @@ function formatBandwidth(bytesPerSec) {
     const RATE_MBPS = "MBit/s";
 
     const bitsPerSec = bytesPerSec * 8;
-    
+
     if (bitsPerSec<SIZE_KB) {
         return `${bitsPerSec}${RATE_BPS}`;
     }
@@ -83,8 +83,8 @@ function setParam(param, val) {
  * @param {String} id Id of a block
  * @param {Boolean} visible Flag of visibility
  */
-function setVisible(id, visible) {
-    document.getElementById(id).style.display = visible ? "block" : "none";
+function setVisible(id, visible, t="block") {
+    document.getElementById(id).style.display = visible ? t : "none";
 }
 
 /**
@@ -138,11 +138,11 @@ function barGraph(p, val, min, max) {
 
 function nearestFib(x) {
     let f1=0, f2=1, fn = 0;
-  
+
     for (let n=1; n<20; n++) {
         fn = f1 + f2;
         if (x<fn) {
-          break;
+            break;
         }
         f2 = f1;
         f1 = fn;
@@ -157,7 +157,7 @@ function barGraphDlUl(p, valDl, valUl) {
     let maxDlUl = history[p].reduce( (accum,current) => [Math.max(accum[0],current[0]),Math.max(accum[1],current[1])] );
     maxDlUl = Math.max(maxDlUl[0], maxDlUl[1]);
     const maxMb = nearestFib(maxDlUl / SIZE_MB);
-    
+
     const maxPlot = maxMb * SIZE_MB;
 
     const MARGIN=6;
@@ -218,6 +218,13 @@ function currentBand() {
                 setParam("mode", fullMode);
                 setMode(currentMode);
 
+                const band = doc.wwanadv.curBand;
+                setParam("band", band);
+                setVisible("castat", caStatus!==0, "inline");
+                setParam("ca", caStatus);
+                report += `\nBand : ${band}`;
+                if (caStatus!==0) report+=`+${caStatus}CA`;
+
                 const rssi = `${doc.wwan.signalStrength.rssi}dBm`;
                 report += `\nRSSI : ${rssi}`;
                 setParam("rssi", rssi);
@@ -236,7 +243,7 @@ function currentBand() {
                     const rscp = doc.wwan.signalStrength.rscp;
                     const ecio = doc.wwan.signalStrength.ecio;
                     report += `\nRSCP : ${rscp}dBm EC/IO : ${ecio}dB`;
-                    
+
                     setParam("rscp", `${rscp}dBm`); barGraph("rscp", rscp, -100, -70);
                     setParam("ecio", `${ecio}dB`); barGraph("ecio", ecio, -10, -2);
 
@@ -254,7 +261,7 @@ function currentBand() {
                     const rsrp = doc.wwan.signalStrength.rsrp;
                     const sinr = doc.wwan.signalStrength.sinr;
                     report += `\nRSRQ/RSRP/SINR : ${rsrq}dB/${rsrp}dBm/${sinr}dB`;
-                    
+
                     setParam("rsrp", `${rsrp}dBm`); barGraph("rsrp", rsrp, -130, -60);
                     setParam("rsrq", `${rsrq}dB`); barGraph("rsrq", rsrq, -16, -3);
                     setParam("sinr", `${sinr}dB`); barGraph("sinr", sinr, 0, 24);
@@ -277,11 +284,11 @@ function currentBand() {
                     const dlRateStr = formatBandwidth(dlRate);
                     const ulRateStr = formatBandwidth(ulRate);
                     report += `\nDownload : ${dlRateStr} Upload : ${ulRateStr}`;
-        
+
                     setParam("dl", dlRateStr);
                     setParam("ul", ulRateStr);
                     barGraphDlUl("dlul", dlRate, ulRate);
-    
+
                     history.dl = dl;
                     history.ul = ul;
                 }
@@ -299,6 +306,7 @@ const header = `<style>
     #mode,
     #rssi,
     #plmn,
+    #band,#ca,
     #cellidhex,#cellid,
     #nb,#cc,#rnc,
     #enb,#cell,
@@ -340,6 +348,7 @@ const header = `<style>
         </ul>
         <ul>
             <li>PLMN:<span id="plmn">#</span></li>
+            <li>Band:<span id="band">#</span><span id="castat">+<span id="ca">#</span>CA</span></li>
         </ul>
         <ul>
             <li>Cell ID:<span id="cellidhex">#</span>/<span id="cellid">#</span></li>
