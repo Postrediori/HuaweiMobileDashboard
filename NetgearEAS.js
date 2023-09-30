@@ -247,6 +247,9 @@ function currentBand() {
                     setParam("rscp", `${rscp}dBm`); barGraph("rscp", rscp, -100, -70);
                     setParam("ecio", `${ecio}dB`); barGraph("ecio", ecio, -10, -2);
 
+                    const psc = doc.wwanadv.primScode;
+                    setParam("psc", psc);
+
                     const rnc = cellid >> 16;
                     const id = cellid & 0xffff;
                     setParam("rnc", rnc);
@@ -265,6 +268,15 @@ function currentBand() {
                     setParam("rsrp", `${rsrp}dBm`); barGraph("rsrp", rsrp, -130, -60);
                     setParam("rsrq", `${rsrq}dB`); barGraph("rsrq", rsrq, -16, -3);
                     setParam("sinr", `${sinr}dB`); barGraph("sinr", sinr, 0, 24);
+
+                    const pci = doc.wwanadv.primScode;
+                    if (pci===-1) {
+                        setVisible("lpci", false);
+                    }
+                    else {
+                        setVisible("lpci", true, "inline");
+                        setParam("pci", pci);
+                    }
 
                     const enb = cellid >> 8;
                     const id = cellid & 0xff;
@@ -308,8 +320,8 @@ const header = `<style>
     #plmn,
     #band,#ca,
     #cellidhex,#cellid,
-    #nb,#cc,#rnc,
-    #enb,#cell,
+    #nb,#cc,#rnc,#psc,
+    #enb,#cell,#pci,
     #rscp,
     #ecio,
     #rsrq,
@@ -356,9 +368,11 @@ const header = `<style>
         <ul id="u3g">
             <li>NB / Cell:<span id="nb">#</span>/<span id="cc">#</span></li>
             <li>RNC-ID:<span id="rnc">#</span></li>
+            <li>SC:<span id="psc">#</span></li>
         </ul>
         <ul id="ulte">
             <li>eNB / Cell:<span id="enb">#</span>/<span id="cell">#</span></li>
+            <li id="lpci">PCI:<span id="pci">#</span></li>
         </ul>
     </div>
     <div class="f" id="status_3g">
