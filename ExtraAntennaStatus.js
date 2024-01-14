@@ -27,7 +27,7 @@ const SIZE_GB = 1024 * 1024 * 1024;
 /**
  * Global variables
  */
-let mode = "";
+let mode = "", btstatus;
 let history = {sinr: [], rsrp: [], rsrq: [], rscp: [], ecio: [], dlul:[]};
 let timerInterval;
 
@@ -447,6 +447,41 @@ function currentBand() {
             }
         }
     });
+
+    $.ajax({
+        type: "GET",
+        async: true,
+        url: '/api/monitoring/status',
+        error: function(request,status,error) {
+            console.log("Error: PLMN status response fail:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
+        },
+        success: function(data) {
+            const doc = getXMLDocument(data);
+            if (doc) {
+                const newstatus = extractXML("BatteryStatus", doc);
+                if (btstatus!==newstatus) {
+                    btstatus = newstatus;
+
+                    setVisible("battery", btstatus!=="");
+                }
+
+                if (btstatus!=="") {
+                    const btlevel = extractXML("BatteryPercent", doc);
+
+                    setParam("btlevel", `${btlevel}%`);
+
+                    const BATTERY_SOURCE = {
+                        "0" : "No Charge",
+                        "1" : "Charging",
+                        "-1" : "Low",
+                        "2" : "No Battery",
+                    };
+
+                    setParam("btsource", BATTERY_SOURCE[btstatus.toString()]);
+                }
+            }
+        }
+    });
 }
 
 function setBandWait() {
@@ -473,7 +508,7 @@ function ltebandselection(e) {
         "If you want to use multiple LTE bands, write down multiple band number joined with '+'. " +
         "If you want to use every supported bands, write down 'ALL'. (e.g. 3+7 / 1+3 / 1+3+8). " +
         "Leave this empty to leave as is.", "ALL");
-    if (band==null || band==="") {
+    if (band===null || band==="") {
         console.log("No band selected");
         return;
     }
@@ -671,7 +706,8 @@ const header = `<style>
     #sinr,
     #ul,
     #dl,
-    #support_lte {
+    #support_lte,
+    #btlevel, #btsource {
         color: #b00;
         font-weight: strong;
     }
@@ -753,6 +789,12 @@ const header = `<style>
             <li>Download:<span id="dl">#</span></li>
             <li>Upload:<span id="ul">#</span></li>
         </ul><div id="bdlul"></div>
+    </div>
+    <div class="f" id="battery">
+        <ul>
+            <li>Battery:<span id="btlevel">#</span></li>
+            <li>Charge:<span id="btsource">#</span></li>
+        </ul>
     </div>
 </div>
 <div style="display:block;overflow: auto;">

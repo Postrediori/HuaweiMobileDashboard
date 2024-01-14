@@ -27,7 +27,7 @@ const SIZE_GB = 1024 * 1024 * 1024;
 /**
  * Global variables
  */
-let mode = "";
+let mode = "", btstate;
 let history = {sinr: [], rsrp: [], rsrq: [], rscp: [], ecio: [], dl: 0, ul: 0, dlultime:0, dlul:[]};
 
 /**
@@ -307,6 +307,17 @@ function currentBand() {
 
                 history.dlultime = dlultime;
 
+                if (btstate !== doc.power.batteryState) {
+                    btstate = doc.power.batteryState;
+
+                    setVisible("battery", btstate !== "NoBattery");
+                }
+
+                if (btstate !== "NoBattery") {
+                    setParam("btlevel", `${doc.power.battChargeLevel}%`);
+                    setParam("btsource", doc.power.battChargeSource);
+                }
+
                 console.log(report);
             }
         }
@@ -328,7 +339,8 @@ const header = `<style>
     #rsrp,
     #sinr,
     #ul,
-    #dl {
+    #dl,
+    #btlevel, #btsource {
         color: #b00;
         font-weight: strong;
     }
@@ -389,6 +401,12 @@ const header = `<style>
             <li>Download:<span id="dl">#</span></li>
             <li>Upload:<span id="ul">#</span></li>
         </ul><div id="bdlul"></div>
+    </div>
+    <div class="f" id="battery">
+        <ul>
+            <li>Battery:<span id="btlevel">#</span></li>
+            <li>Charge:<span id="btsource">#</span></li>
+        </ul>
     </div>
 </div>`;
     document.body.insertAdjacentHTML("afterbegin", header);
