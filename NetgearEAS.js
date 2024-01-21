@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netgear Extra Antenna Status
 // @namespace    http://github.com/Postrediori/HuaweiMobileDashboard
-// @version      0.5
+// @version      0.5.1
 // @description  Additional dashboard with antenna signal data
 // @author       Postrediori
 // @match        http://192.168.1.1/*
@@ -318,6 +318,9 @@ function currentBand() {
                     setParam("btsource", doc.power.battChargeSource);
                 }
 
+                setParam("tempdevice", `${doc.general.devTemperature}°C`);
+                setParam("tempbatt", `${doc.power.batteryTemperature}°C`);
+
                 console.log(report);
             }
         }
@@ -340,7 +343,8 @@ const header = `<style>
     #sinr,
     #ul,
     #dl,
-    #btlevel, #btsource {
+    #btlevel, #btsource,
+    #tempdevice, #tempbatt {
         color: #b00;
         font-weight: strong;
     }
@@ -406,6 +410,13 @@ const header = `<style>
         <ul>
             <li>Battery:<span id="btlevel">#</span></li>
             <li>Charge:<span id="btsource">#</span></li>
+        </ul>
+    </div>
+    <div class="f">
+        <ul>
+            <li>Temp</li>
+            <li>Device:<span id="tempdevice">#</span></li>
+            <li>Battery:<span id="tempbatt">#</span></li>
         </ul>
     </div>
 </div>`;
