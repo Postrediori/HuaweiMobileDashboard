@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Huawei Extra Antenna Status dashboard
 // @namespace    http://github.com/Postrediori/HuaweiMobileDashboard
-// @version      0.5
+// @version      0.5.1
 // @description  Additional dashboard with antenna signal data
 // @author       Postrediori
 // @match        http://192.168.8.1/*
@@ -60,15 +60,6 @@ function getXMLDocument(data) {
 }
 
 /**
- * Convert string with HTML into Document object
- * @param {String} data String with HTML data
- * @returns Document object or null
- */
-function getHTMLDocument(data) {
-    return getDocument(data, "text/html");
-}
-
-/**
  * Extract tag from XML
  * @param {String} tagName Name of the tag
  * @param {String} doc Document object with XML data
@@ -93,23 +84,16 @@ function extractXML(tagName, doc) {
  * @returns String with csrf_token or null
  */
 function getDocumentCsrfToken(data) {
-    let doc = getHTMLDocument(data);
+    let doc = getXMLDocument(data);
     if (!doc) {
         console.log("Error:Cannot get Web UI page");
         return null;
     }
 
-    let metaTags = doc.querySelectorAll("meta");
-    for (const tag of metaTags) {
-        if (tag.getAttribute("name") === "csrf_token") {
-            let token = tag.getAttribute("content");
-            if (token) {
-                return token;
-            }
-        }
-    }
+    const tag = doc.querySelector("TokInfo");
+    if (!tag) return null;
 
-    return null;
+    return tag.innerHTML;
 }
 
 /**
@@ -532,7 +516,7 @@ function ltebandselection(e) {
     $.ajax({
         type:"GET",
         async: true,
-        url: '/html/home.html',
+        url: '/api/webserver/SesTokInfo',
         error: function(request,status,error){
             console.log("Token Error:", request.status, "\nmessage:", request.responseText, "\nerror:", error);
         },
@@ -797,7 +781,7 @@ const header = `<style>
         </ul>
     </div>
 </div>
-<div style="display:block;overflow: auto;">
+<div style="display:block;overflow:auto;">
     <div class="f">
         <ul>
             <li><a id="setband" href="#">Set LTE Bands</a></li>
