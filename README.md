@@ -2,12 +2,14 @@
 
 This repository contains JavaScript code that show dashboard with mobile connection parameters that are not always available in the Web UI of Huawei&Netgear routers. There are two versions of the script:
 * as a URL code for a browser **Bookmark**
-* as a [TamperMonkey addon](https://www.tampermonkey.net/)
+* as a [TamperMonkey](https://www.tampermonkey.net/) addon
 
 Currently the extra dashboard shows the following data:
 * network type (GSM, WCDMA, LTE)
 * signal strength parameters specific to current network type (e.g. EC/IO for 3G, SINR for LTE)
 * DL/UL rates
+* Battery level and status (for mobile hotspots)
+* Device and battery temperature (for Netgear hotspots)
 
 Additionally, dashboard for the Huawei routers allows fixation of LTE bands.
 
@@ -89,6 +91,7 @@ The script was tested on the following routers:
 * E5330
 * E5573
 * E8372
+* K5160 - DL/UL rates and adjusting LTE bands work. No signal data as firmware doesn't provide signal data by default.
 
 ### Netgear
 
