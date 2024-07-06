@@ -284,28 +284,30 @@ function currentBand() {
                     setParam("cell", id);
                 }
 
-                const dl = doc.wwan.dataTransferredRx;
-                const ul = doc.wwan.dataTransferredTx;
+                if (doc.wwan.dataTransferred >= 0) {
+                    const dl = doc.wwan.dataTransferredRx;
+                    const ul = doc.wwan.dataTransferredTx;
 
-                const dlultime = new Date().getTime();
+                    const dlultime = new Date().getTime();
 
-                if (history.dlultime!==0) {
-                    const t = 1000 / (dlultime - history.dlultime);
-                    const dlRate = history.dl===0 ? 0 : Math.floor((dl - history.dl) * t);
-                    const ulRate = history.ul===0 ? 0 : Math.floor((ul - history.ul) * t);
-                    const dlRateStr = formatBandwidth(dlRate);
-                    const ulRateStr = formatBandwidth(ulRate);
-                    report += `\nDownload : ${dlRateStr} Upload : ${ulRateStr}`;
+                    if (history.dlultime!==0) {
+                        const t = 1000 / (dlultime - history.dlultime);
+                        const dlRate = history.dl===0 ? 0 : Math.floor((dl - history.dl) * t);
+                        const ulRate = history.ul===0 ? 0 : Math.floor((ul - history.ul) * t);
+                        const dlRateStr = formatBandwidth(dlRate);
+                        const ulRateStr = formatBandwidth(ulRate);
+                        report += `\nDownload : ${dlRateStr} Upload : ${ulRateStr}`;
 
-                    setParam("dl", dlRateStr);
-                    setParam("ul", ulRateStr);
-                    barGraphDlUl("dlul", dlRate, ulRate);
+                        setParam("dl", dlRateStr);
+                        setParam("ul", ulRateStr);
+                        barGraphDlUl("dlul", dlRate, ulRate);
 
-                    history.dl = dl;
-                    history.ul = ul;
+                        history.dl = dl;
+                        history.ul = ul;
+                    }
+
+                    history.dlultime = dlultime;
                 }
-
-                history.dlultime = dlultime;
 
                 if (btstate !== doc.power.batteryState) {
                     btstate = doc.power.batteryState;

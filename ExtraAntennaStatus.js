@@ -306,7 +306,7 @@ function barGraphDlUl(p, valDl, valUl) {
         html += `<line x1="${pax}" y1="${pay}" x2="${pax}" y2="${pby1}" stroke="${color1}" stroke-width="${gt}"></line>`;
         html += `<line x1="${pax}" y1="${pby1}" x2="${pax}" y2="${pby2}" stroke="${color2}" stroke-width="${gt}"></line>`;
     }
-    html += `<text x="${gw}" y="0" dominant-baseline="hanging" text-anchor="end" style="fill:gray;">${maxMb.toFixed(0)}MBit/s</text>`;
+    html += `<text x="${gw}" y="5" dominant-baseline="hanging" text-anchor="end" style="fill:gray;">${maxMb.toFixed(0)}MBit/s</text>`;
     html += "</svg>";
     document.getElementById("b" + p).innerHTML = html;
 }
@@ -725,6 +725,8 @@ const header = `<style>
         display: inline;
         margin-right: 10px;
     }
+
+    .f ul li label { display: inline; }
 
     #t {
         float: left;
