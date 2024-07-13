@@ -577,6 +577,14 @@ function ltebandselection(e) {
     });
 }
 
+function binZero() {
+    return '0'.repeat(63).split('');
+}
+
+function hexToBin(s) {
+    return s.padStart(16,'0').split('').map((c)=>{return parseInt(c,16).toString(2).padStart(4,'0')}).join('').substring(1).split('').reverse();
+}
+
 /**
  * Get a list of supported bands using tag items
  * @param {Document} doc XML Document with list of supported bands
@@ -584,7 +592,7 @@ function ltebandselection(e) {
  * @returns BigInt with bands mask
  */
 function getBandFlags(doc, tag) {
-    let flags = 0n;
+    let flags = binZero();
 
     for (const lt of doc.querySelectorAll(tag)) {
         for (const t of lt.childNodes) {
@@ -593,8 +601,7 @@ function getBandFlags(doc, tag) {
 
             if (t.nodeName==="Value") {
                 try {
-                    let f=BigInt(`0x${t.innerHTML}`);
-                    flags|=f;
+                    flags=hexToBin(t.innerHTML).map((c,i)=>{return(c==="1"||flags[i]==="1")?"1":"0";});
                 } catch(err){console.log("Error: Cannot parse band mask:",err.message);}
             }
         }
@@ -615,7 +622,7 @@ function supportedBands() {
             const doc = getXMLDocument(data);
             if (!doc) { return; }
 
-            let flagsActive = 0n;
+            let flagsActive = binZero();
             try {
                 do {
                     const m=doc.querySelector("NetworkMode");
@@ -627,14 +634,14 @@ function supportedBands() {
 
                     const t=doc.querySelector("LTEBand");
                     if (t) {
-                        flagsActive=BigInt(`0x${t.innerHTML}`);
+                        flagsActive=hexToBin(t.innerHTML);
                     }
                 } while(0);
             }
             catch(err) {
                 console.log("Error: cannot parse band flags:",err.message);
             }
-            console.log(`Active LTE flags: 0x${flagsActive.toString(16)}`);
+            console.log(`Active LTE flags: ${flagsActive}`);
 
             $.ajax({
                 type: "GET",
@@ -651,23 +658,13 @@ function supportedBands() {
 
                     /* LTE Bands */
                     let flagsLte = getBandFlags(doc, "LTEBand");
+                    let supportedLte = flagsLte.map((k,i)=>{return k==="1"?i+1:0}).filter((k)=>{return k>0;});
 
-                    let supportedLte = [];
-
-                    let x=1;
-                    while (flagsLte!=0n) {
-                        if ((flagsLte & 1n) !== 0n) {
-                            supportedLte.push(x);
-                        }
-                        x++;
-                        flagsLte = flagsLte >> 1n;
-                    }
-
-                    setParam('support_lte', supportedLte.map(function(k){
-                        return `<span class="${ (flagsActive & (1n << BigInt(k-1))) !== 0n ? "band_on" : "band_off" }">B${k}</span>`;
+                    setParam('support_lte', supportedLte.map((k)=>{
+                        return `<span class="${ flagsActive[k-1]==='1' ? "band_on" : "band_off" }">B${k}</span>`;
                     }).join('+'));
 
-                    let report = `Supported LTE: ${supportedLte.map(function(k){return `B${k}`}).join('+')}`;
+                    let report = `Supported LTE: ${supportedLte.map((k)=>{return `B${k}`;}).join('+')}`;
                     console.log(report);
                 }
             });
