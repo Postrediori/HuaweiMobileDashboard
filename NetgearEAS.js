@@ -320,8 +320,8 @@ function currentBand() {
                     setParam("btsource", doc.power.battChargeSource);
                 }
 
-                setParam("tempdevice", `${doc.general.devTemperature}°C`);
-                setParam("tempbatt", `${doc.power.batteryTemperature}°C`);
+                setParam("tempdevice", `${doc.general.devTemperature}&#8451;`);
+                setParam("tempbatt", `${doc.power.batteryTemperature}&#8451;`);
 
                 console.log(report);
             }
