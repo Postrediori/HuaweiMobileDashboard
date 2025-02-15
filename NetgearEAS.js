@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netgear Extra Antenna Status
 // @namespace    http://github.com/Postrediori/HuaweiMobileDashboard
-// @version      0.5.1
+// @version      0.5.2
 // @description  Additional dashboard with antenna signal data
 // @author       Postrediori
 // @match        http://192.168.1.1/*
@@ -124,10 +124,11 @@ function barGraph(p, val, min, max) {
     let html = `<svg version="1.1" viewBox="0 0 ${gw} ${gh}" width="${gw}" height="${gh}" preserveAspectRatio="xMaxYMax slice" style="border:1px solid #ccc;padding:1px;margin-top:-6px;width:${gw}px;">`;
 
     for (let x = 0; x < history[p].length; x++) {
-        let pax = (gt + 1) * (x + 1);
+        let pax = 2 + (gt + 1) * x;
         let pay = gh - 1;
         let pby = gh - (history[p][x] - min) / (max - min) * gh;
         if (isNaN(pby)){pby = pay;}
+        if (pby > pay){pby = pay - 1;}
         let pc = (history[p][x] - min) / (max - min) * 100;
         let color = pc < 50 ? "red" : (pc < 85 ? "orange" : "green");
         html += `<line x1="${pax}" y1="${pay}" x2="${pax}" y2="${pby}" stroke="${color}" stroke-width="${gt}"></line>`;
@@ -166,11 +167,11 @@ function barGraphDlUl(p, valDl, valUl) {
     for (let x = 0; x < history[p].length; x++) {
         let dl = history[p][x][0], ul = history[p][x][1];
 
-        let pax = (gt + 1) * (x + 1);
+        let pax = 2 + (gt + 1) * x;
         let pay = ghd - 1;
 
-        let pbyDl = ghd * (1 - dl / maxPlot);
-        let pbyUl = ghd * (1 - ul / maxPlot);
+        let pbyDl = pay - (ghd - 2) * (dl / maxPlot);
+        let pbyUl = pay - (ghd - 2) * (ul / maxPlot);
 
         let pby1 = pay, pby2 = pay;
         let color1 = "#DDCC77", color2 = "grey";
@@ -184,9 +185,15 @@ function barGraphDlUl(p, valDl, valUl) {
             pby2 = pbyUl;
             color2 = "#88CCEE";
         }
+        if ((pay-pby1)<=1 && (pay-pby2)<=1) {
+            color1 = "#332288";
+            pby1 = pay - 1;
+        }
+        else {
+            html += `<line x1="${pax}" y1="${pby1}" x2="${pax}" y2="${pby2}" stroke="${color2}" stroke-width="${gt}"></line>`;
+        }
 
         html += `<line x1="${pax}" y1="${pay}" x2="${pax}" y2="${pby1}" stroke="${color1}" stroke-width="${gt}"></line>`;
-        html += `<line x1="${pax}" y1="${pby1}" x2="${pax}" y2="${pby2}" stroke="${color2}" stroke-width="${gt}"></line>`;
     }
     html += `<text x="${gw}" y="${MARGIN}" dominant-baseline="hanging" text-anchor="end" style="fill:gray;">${maxMb.toFixed(0)}MBit/s</text>`;
     html += "</svg>";
@@ -265,7 +272,7 @@ function currentBand() {
                     const sinr = doc.wwan.signalStrength.sinr;
                     report += `\nRSRQ/RSRP/SINR : ${rsrq}dB/${rsrp}dBm/${sinr}dB`;
 
-                    setParam("rsrp", `${rsrp}dBm`); barGraph("rsrp", rsrp, -130, -60);
+                    setParam("rsrp", `${rsrp}dBm`); barGraph("rsrp", rsrp, -130, -70);
                     setParam("rsrq", `${rsrq}dB`); barGraph("rsrq", rsrq, -16, -3);
                     setParam("sinr", `${sinr}dB`); barGraph("sinr", sinr, 0, 24);
 
